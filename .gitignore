@@ -1,0 +1,11 @@
+*.swp
+*.pyc
+.jazz5
+.metadata
+.jazzShed
+core*dmp
+Snap*
+heapdump*phd
+javacore*txt
+migration
+db*

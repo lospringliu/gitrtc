@@ -1,0 +1,25 @@
+{% extends "site.html" %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  {{ media.css }}
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+	<div>
+		<h1 style="color:blue">
+			{% for snapshot in Snapshot.objects.all %}
+				{{ snapshot.uuid }}
+			{% endfor %}
+		</h1>
+	</div>
+	<div>
+		<h1>Component Info</h1>
+		<table>
+		</table>
+	</div>
+	<hr>
+
+{% endblock %}
