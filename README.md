@@ -11,7 +11,7 @@
 
 ## Requirements
   - SCM tools (recommend lscm for performance, tune java heap size to 3G+ if you have large amount of changesets in streams)
-  - python3 + Django + django-mptt
+  - python3 + Django + django-mptt + docutils
   - mysql + mysqlclient (optional, if your component has 10K+ changesets for performance consideration)
   - use ubuntu 14.04 / 16.04 x64 when doing the migration, with scmtools and IBM jdk 1.8
   
@@ -28,7 +28,7 @@
     * lscm help  (see help information)
   2. install python3
   3. install python3 modules
-    * pip3 install Django django-mptt
+    * pip3 install Django django-mptt docutils
     * pip3 install mysqlclient (if select to use mysql database)
   4. fork, clone and configure the tool
     * edit local_settings.py, you can specify your rtc information to automate login and relogin
