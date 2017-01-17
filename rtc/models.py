@@ -779,7 +779,7 @@ class Stream(MPTTModel):
 		history_dirbase = os.path.join(settings.BASE_DIR,'History')
 		history_dir = os.path.join(settings.BASE_DIR,'tmp',self.component.name)
 		subprocess.check_output("mkdir -p %s ; exit 0" % history_dir,shell=True)
-		history_filename = os.path.join(history_dirbase,'history_%s' % self.name)
+		history_filename = os.path.join(history_dirbase,'history_%s_%s' % (self.component.name, self.name))
 		uuid_file = os.path.join(history_dir, "uuid_%s" % re.sub(r' ','',self.name))
 		changesetp = None
 		updated = True
