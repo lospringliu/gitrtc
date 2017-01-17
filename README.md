@@ -17,8 +17,9 @@
   
 ## Tested on
   - MacOs 10.12
-  - ubuntu 14.04 (best)
+  - ubuntu 14.04/16.04 (best)
   - RHEL 6
+  - docker https://hub.docker.com/r/lospringliu/gitrtc/
   
 ## Steps
   1. install scmtools and login with proper account as the alias rtc
