@@ -49,6 +49,8 @@ def stream_rebuild_tree():
 
 if __name__ == '__main__':
 #	cmd = sys.argv.pop(1)
+	if not os.path.exists(os.path.join(DJANGOPATH,'tmp')):
+		os.mkdir(os.path.join(DJANGOPATH,'tmp'))
 	if options.infoinit or options.infoshow or options.infoupdate or options.inforeport or options.infoverify or options.migrate:
 		component_name = options.component
 		if not component_name:
