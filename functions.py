@@ -38,7 +38,12 @@ def git_list_tags(rtcdir):
 	return shell.getoutput("git -C %s tag" % rtcdir ,clean=False).strip().split('\n')
 
 def notify_admin(subject='notify_subject from %s' % NODE_NAME, body='', mail_from=MAIL_FROM, mail_to=MAIL_ADMIN):
-	send_mail(subject, body, mail_from, mail_to)
+	try:
+		send_mail(subject, body, mail_from, mail_to)
+	except Exception as e:
+		shouter.shout("\t.!. you did not configure mail properly, displaying it on screen")
+		print(subject)
+		print(body)
 
 def git_got_changes(gitdir=None):
 	if not gitdir:
