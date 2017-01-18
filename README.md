@@ -81,14 +81,23 @@
 
 ## Examples
   1. ./djangoapp.py --component init --streambase init_trunk --infoinit  (only once)
+    1. this generate rtc/fixtures/infoinit.json which will be loaded for each component you are going to migrate
   2. ./djangoapp.py --component yarn --streambase yarn_trunk --infoupdate
     1. ./djangoapp.py --component yarn --streambase yarn_trunk --infoupdate --branchfuther --streamparent yarn_IOP_working
-  3. ./djangoapp.py --component yarn --streambase yarn_trunk --infoverify
-  4. ./djangoapp.py --component yarn --streambase yarn_trunk --inforeport
+      1. if all of you streams are directly cut from trunk, this step is not necessary
+      2. if your branching if complicated, you would spend quite some time in this step
+    2. ./djangoapp.py --component yarn --streambase yarn_trunk --infoupdate --incremental --streams [200]
+      1. perform an update of stream with id 200, this will pickup any new baselines and changesets since last --infoupdate
+  3. ./djangoapp.py --component yarn --streambase yarn_trunk --inforeport
     1. ./djangoapp.py --component yarn --streambase yarn_trunk --inforeport --withbaselines
     2. ./djangoapp.py --component yarn --streambase yarn_trunk --inforeport --withchangesets
     3. ./djangoapp.py --component yarn --streambase yarn_trunk --inforeport --withbaselines --withchangesets --streams [3,5,7]
-  5. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate
+  4. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate (this migrate the trunk stream)
     1. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --streams [200]
-    2. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --incremental
-    3. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --allstreams
+      1. migrate a single stream whose id is 200
+    2. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --allstreams
+      1. tries to migrate all streams. If your stream relationship is complicated, you might need to run multiple times
+    3. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --incremental
+      1. perform an updated migration of trunk stream to git
+    4. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --incremental --streams [200]
+      1. perform an updated migration of stream with id 200 to git
