@@ -7,13 +7,14 @@
 ## Progress
   - The tool is good for stream branching determine
   - The tool is good for verification after a component was migrated to git repository
-  - The tool is good for the actual migration
+  - The tool is good for the actual migration now
 
 ## Requirements
+  - this intends to support only rtc v6+ (lscm show history returns a limit of 1000 items, the earlier version only return 100)
   - SCM tools (recommend lscm for performance, tune java heap size to 3G+ if you have large amount of changesets in streams)
   - python3 + Django + django-mptt + docutils
   - mysql + mysqlclient (optional, if your component has 10K+ changesets for performance consideration)
-  - use ubuntu 14.04 / 16.04 x64 when doing the migration, with scmtools and IBM jdk 1.8
+  - use ubuntu 14.04 / 16.04 x64 when doing the migration, with scmtools and IBM java 1.8
   
 ## Tested on
   - MacOs 10.12
@@ -32,7 +33,9 @@
     * pip3 install Django django-mptt docutils
     * pip3 install mysqlclient (if select to use mysql database)
   4. fork, clone and configure the tool
-    * edit local_settings.py, you can specify your rtc information to automate login and relogin
+    * edit local_settings.py, you can specify your rtc information to automate login and relogin (rtc login / relogin works in shell environment, you might need change your password to make it work, confirm with cmd line test in step 1 above)
+    * edit local_settings.py, you can configure your mail function
+    * edit local_settings.py, COMPONENT_CREATORS provide information for the component creator info (by default I only figure out user name of the creator, but do not know the email, this variable provides this info)
     * edit local_settings.py to decide using sqlite or mysql for database backend.
   5. run the tool:
     * ./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --infoverify | --migrate] [other options]
