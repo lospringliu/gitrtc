@@ -236,7 +236,7 @@ def rtclogin(real_login=False):
 			shell.execute(login_command)
 		else:
 			shouter.shout("syntax: %s" % login_command0)
-			input("hit any key to continue when you did the login")
+			input("hit any key to continue when you did the login, or better break and update local_settings.py to rtc information")
 	shouter.shout("\t... found cached connections")
 
 def rtclogin_restart():
