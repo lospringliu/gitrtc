@@ -52,7 +52,10 @@ if __name__ == '__main__':
 	if not os.path.exists(os.path.join(DJANGOPATH,'tmp')):
 		os.mkdir(os.path.join(DJANGOPATH,'tmp'))
 	try:
-		shell.execute("which lscm")
+		output = shell.get_output("which lscm",clean=False)
+		if not re.match(r'.*scm',output):
+			shouter.shout("\t!!! I did not find lscm command, did you install scmtools and have it in your PATH env?")
+			sys.exit(9)
 	except Exception as e:
 		shouter.shout("\t!!! I did not find lscm command, did you install scmtools and have it in your PATH env?")
 		sys.exit(9)
