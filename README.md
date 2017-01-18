@@ -5,8 +5,7 @@
 ## Credits: https://github.com/rtcTo/rtc2git
 
 ## Progress
-  - The tool is good for stream branching determine
-  - The tool is good for verification after a component was migrated to git repository
+  - The tool is good for changeset history collection and stream branching determine
   - The tool is good for the actual migration now
 
 ## Requirements
@@ -38,7 +37,7 @@
     * edit local_settings.py, COMPONENT_CREATORS provide information for the component creator info (by default I only figure out user name of the creator, but do not know the email, this variable provides this info)
     * edit local_settings.py to decide using sqlite or mysql for database backend.
   5. run the tool:
-    * ./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --infoverify | --migrate] [other options]
+    * ./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --migrate] [other options]
       * --infoinit (run only once, you should keep using fake component like 'init' and fake streambase like 'init_trunk')
         * retrieve all of your project areas
         * retrieve their related streams
@@ -69,10 +68,6 @@
           limit the streams to show in the report if you have too many or you only interest in some of them
           * --levelrange [0,1000] --levelinterval 10
           used when --withchangesets
-      * --infoverify [--recordpath /path/to/records]
-        * update internals to pick up database changes without --recordpath parameter
-        * you need modify to fit your case
-        * the recordpath is the location of the files with changeset uuid <-> git commitid information 
       * --migrate 
         * migrate only the trunk (--streambase) by default
         * you can migrate any stream using --streams [stread_id]

@@ -167,7 +167,8 @@ if __name__ == '__main__':
 		except Stream.DoesNotExist:
 			shouter.shout("\t!!! stream you specified does not exist")
 	elif options.infoverify:
-		shouter.shout("\t ... start verifing informations or verifying streams with git")
+		shouter.shout("\t ... verification is case by case, existing ...")
+		sys.exit(9)
 		try:
 			sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
 			sorted_streams.insert(0,stream0)
