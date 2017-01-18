@@ -68,11 +68,11 @@
           limit the streams to show in the report if you have too many or you only interest in some of them
           * --levelrange [0,1000] --levelinterval 10
           used when --withchangesets
-      * --migrate 
-        * migrate only the trunk (--streambase) by default
-        * you can migrate any stream using --streams [stread_id]
+      * --migrate [--allstreams] [--streams [id1,id2]]
+        * migrate only the trunk with --migrate only
+        * you can migrate any streams using --streams [stream_id, stream_id2]
         * you can try to migrate all streams with --allstreams
-        * you can use --incremental to pickup recently delivered changesets
+        * you can use --incremental to pickup recently delivered changesets (collected already by --infoupdate --incremental)
 
 ## Examples
   1. ./djangoapp.py --component init --streambase init_trunk --infoinit  (only once)
