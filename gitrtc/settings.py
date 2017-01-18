@@ -25,7 +25,7 @@ SECRET_KEY = '9gz80)i7j(m^za#p5*su0zoq@i)2d@7uxq_wb91!6-@@%@dj#('
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*',]
 
 
 # Application definition
@@ -57,12 +57,12 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'gitrtc.urls'
 
 TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.jinja2.Jinja2',
-        'DIRS': [os.path.join(BASE_DIR, 'templates/jinja2')],
-        'APP_DIRS': True,
-        'OPTIONS': {'environment': 'gitrtc.jinja2.Environment',}, 
-    },
+   # {
+   #     'BACKEND': 'django.template.backends.jinja2.Jinja2',
+   #     'DIRS': [os.path.join(BASE_DIR, 'templates/jinja2')],
+   #     'APP_DIRS': True,
+   #     'OPTIONS': {'environment': 'gitrtc.jinja2.Environment',}, 
+   # },
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(BASE_DIR,'templates')],
