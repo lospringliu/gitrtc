@@ -50,7 +50,7 @@ def quote_old(stringtoquote):
     return escapeShellVariableExpansion(quotedstring)
 
 def escapeShellVariableExpansion(comment):
-    return comment.replace('$', '"\\$"')
+    return comment.replace('$', '\\$')
 
 def shout_command_to_log(command, outputfile=None):
     if logcommands:
