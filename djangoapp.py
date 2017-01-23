@@ -257,7 +257,7 @@ if __name__ == '__main__':
 			if stream.verified:
 				shouter.shout("\t... stream %s has already been verified" % stream.name)
 				continue
-			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name),'-verify')
+			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
 			if not os.path.exists(rtcdir):
 				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
 				if not created:
