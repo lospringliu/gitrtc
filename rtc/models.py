@@ -1900,6 +1900,13 @@ class Workspace(models.Model):
 			shouter.shout("\t!!! can not load, check workspace please")
 			return "no uuid to load"
 
+	def ws_unload(self,load_dir='.'):
+		if self.uuid:
+			return shell.getoutput("cd %s ; %s unload -r rtc -i -D -w %s -C %s" % (load_dir,scmcommand,self.component.uuid,self.uuid),clean=False)
+		else:
+			shouter.shout("\t!!! can not unload, check workspace please")
+			return "no uuid to load"
+
 	def ws_delete(self):
 		if self.ws_exist():
 			self.ws_update()

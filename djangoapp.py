@@ -307,7 +307,7 @@ if __name__ == '__main__':
 					#	input("press any key to continue or break")
 					#ws_verify.ws_delete()
 					#time.sleep(2)
-			shouter.shout("\t ... verifying 10 random changesets")
+			#shouter.shout("\t ... verifying 10 random changesets")
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()
