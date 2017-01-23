@@ -176,7 +176,7 @@ if __name__ == '__main__':
 			shouter.shout("\t!!! stream you specified does not exist")
 	elif options.infoverify:
 		shouter.shout("\t ... verifying specified streams ...")
-		filtered_streams = list(filter(lambda x: x.migrated,list_streams))
+		filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
 		sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
 	#	try:
 	#		sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
