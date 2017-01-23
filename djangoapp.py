@@ -25,7 +25,7 @@ parser.add_option("--showstream",help="show information about stream", action="s
 parser.add_option("--inforeport",help="report information about component and streams", action="store_true")
 parser.add_option("--withchangesets",help="write information about stream to file including changesets", action="store_true")
 parser.add_option("--writehistory",help="write stream history to file", action="store_true")
-parser.add_option("--infoverify",help="verify stream with git branch", action="store_true")
+parser.add_option("--infoverify",help="verify stream with git branch making sure the baselines in stream is correct", action="store_true")
 parser.add_option("--withbaselines",help="write or verify stream with baselines in stream", action="store_true")
 parser.add_option("--withfirstbaselineinstream",help="print first baseline in stream to help relationship", action="store_true")
 parser.add_option("--withbranchingpoint",help="print the branching point", action="store_true")
@@ -175,117 +175,139 @@ if __name__ == '__main__':
 		except Stream.DoesNotExist:
 			shouter.shout("\t!!! stream you specified does not exist")
 	elif options.infoverify:
-		shouter.shout("\t ... verification is case by case, existing ...")
-		sys.exit(9)
-		try:
-			sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
-			sorted_streams.insert(0,stream0)
-		except Stream.DoesNotExist:
-			shouter.shout("\t!!! stream you specified does not exist")
-		if options.recordpath:
-			shouter.shout("\t ... try to load changesetuuid<->commitid")
-			for stream in sorted_streams:
-				empty_sn = 1
-				file_string = os.path.join(options.recordpath, "git_%s" % stream.name)
-				if os.path.exists(file_string):
-					shouter.shout("\t ... load records for stream %s" % stream.name)
-					with open(file_string,'r') as f:
-						lines = f.read().strip()
-						for line in lines.split('\n'):
-							parts = line.split(':')
-							if len(parts) == 2:
-								sequence = 1
-								changeset = None
-								try:
-									changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
-									while not changeset in list(stream.lastchangeset.get_ancestors()) + [stream.lastchangeset]:
-										sequence += 1
-										changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
-								except ChangeSet.DoesNotExist:
-									shouter.shout("\t !!! got an issue to load records, verify please")
-									sys.exit(9)
-								commitid = parts[1].strip()
-								if not commitid:
-									commitid = "empty%03g%s" % (empty_sn, stream.name.lower())
-									empty_sn += 1
-								gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
-								if not changeset.commit:
-									changeset.commit = gitcommit
-									changeset.save()
-								elif changeset.commit.commitid != commitid:
-									print(line)
-									shouter.shout("\t .!. got multiple commited git record for changeset %s" % gitcommit.commitid)
-									input("press any key to continue or break")
-								else:
-									print(line)
-									shouter.shout("\t .!. got duplicated git record for changeset %s" % gitcommit.commitid)
-							else:
-								shouter.shout("\t.!. got a record abnormal, check please")
-								input("hit any key to continue or to break")
-				else:
-					shouter.shout("\t .!. did not find record for stream %s" % stream.name)
-		else:
-			shouter.shout("\t ... you did not specify where to load changeset uuid and commit id records, verifying the completeness instead")
-			for stream in sorted_streams:
-				if not stream.history_updated:
-					shouter.shout("\t!!! stream %s is not handled yet, please do it with --infoupdate" % stream.name)
-				elif stream.history_partial or stream.history_inconsistent:
-					shouter.shout("\t.!. stream %s has some issues with its history processing, please handle them" % stream.name)
-				else:
-					shouter.shout("\t... check each baseline in stream %s" % stream.name)
-					for bis in stream.baselineinstream_set.all():
-						if not bis.historys_processed:
-							shouter.shout("\t\t!!! %s was not processed, try --infoupdate" % bis.baseline.name)
-							sys.exit(9)
-						elif not bis.firstchangeset or not bis.lastchangeset:
-							if bis.historys.all():
-								shouter.shout("\t\t... updating")
-								bis.firstchangeset = bis.historys.first()
-								bis.lastchangeset = bis.historys.last()
-								bis.save()
-							else:
-								shouter.shout("\t\t.!. %s does not have its changeset historys" % bis.baseline.name)
-						else:
-							shouter.shout("\t\t... %s fine" % bis.baseline.name)
-			#sys.exi(9)
+		shouter.shout("\t ... verifying specified streams ...")
+		filtered_streams = list(filter(lambda x: x.migrated,list_streams))
+		sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
+	#	try:
+	#		sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
+	#		sorted_streams.insert(0,stream0)
+	#	except Stream.DoesNotExist:
+	#		shouter.shout("\t!!! stream you specified does not exist")
+	#	if options.recordpath:
+	#		shouter.shout("\t ... try to load changesetuuid<->commitid")
+	#		for stream in sorted_streams:
+	#			empty_sn = 1
+	#			file_string = os.path.join(options.recordpath, "git_%s" % stream.name)
+	#			if os.path.exists(file_string):
+	#				shouter.shout("\t ... load records for stream %s" % stream.name)
+	#				with open(file_string,'r') as f:
+	#					lines = f.read().strip()
+	#					for line in lines.split('\n'):
+	#						parts = line.split(':')
+	#						if len(parts) == 2:
+	#							sequence = 1
+	#							changeset = None
+	#							try:
+	#								changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
+	#								while not changeset in list(stream.lastchangeset.get_ancestors()) + [stream.lastchangeset]:
+	#									sequence += 1
+	#									changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
+	#							except ChangeSet.DoesNotExist:
+	#								shouter.shout("\t !!! got an issue to load records, verify please")
+	#								sys.exit(9)
+	#							commitid = parts[1].strip()
+	#							if not commitid:
+	#								commitid = "empty%03g%s" % (empty_sn, stream.name.lower())
+	#								empty_sn += 1
+	#							gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
+	#							if not changeset.commit:
+	#								changeset.commit = gitcommit
+	#								changeset.save()
+	#							elif changeset.commit.commitid != commitid:
+	#								print(line)
+	#								shouter.shout("\t .!. got multiple commited git record for changeset %s" % gitcommit.commitid)
+	#								input("press any key to continue or break")
+	#							else:
+	#								print(line)
+	#								shouter.shout("\t .!. got duplicated git record for changeset %s" % gitcommit.commitid)
+	#						else:
+	#							shouter.shout("\t.!. got a record abnormal, check please")
+	#							input("hit any key to continue or to break")
+	#			else:
+	#				shouter.shout("\t .!. did not find record for stream %s" % stream.name)
+	#	else:
+	#		shouter.shout("\t ... you did not specify where to load changeset uuid and commit id records, verifying the completeness instead")
+	#		for stream in sorted_streams:
+	#			if not stream.history_updated:
+	#				shouter.shout("\t!!! stream %s is not handled yet, please do it with --infoupdate" % stream.name)
+	#			elif stream.history_partial or stream.history_inconsistent:
+	#				shouter.shout("\t.!. stream %s has some issues with its history processing, please handle them" % stream.name)
+	#			else:
+	#				shouter.shout("\t... check each baseline in stream %s" % stream.name)
+	#				for bis in stream.baselineinstream_set.all():
+	#					if not bis.historys_processed:
+	#						shouter.shout("\t\t!!! %s was not processed, try --infoupdate" % bis.baseline.name)
+	#						sys.exit(9)
+	#					elif not bis.firstchangeset or not bis.lastchangeset:
+	#						if bis.historys.all():
+	#							shouter.shout("\t\t... updating")
+	#							bis.firstchangeset = bis.historys.first()
+	#							bis.lastchangeset = bis.historys.last()
+	#							bis.save()
+	#						else:
+	#							shouter.shout("\t\t.!. %s does not have its changeset historys" % bis.baseline.name)
+	#					else:
+	#						shouter.shout("\t\t... %s fine" % bis.baseline.name)
+	#		#sys.exi(9)
 		if options.withbaselines:
-			shouter.shout("\t ... verifying baselines")
-			for stream in sorted_streams:
-				shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
-				for bis in stream.baselineinstream_set.all():
-					if bis.historys.all():
-						print("%-3g%-3g %s %3g-%-3g %s %s %s" % (bis.baseline.level, bis.baseline.bid, bis.historys.first().uuid, bis.historys.first().level, bis.historys.last().level, bis.historys.last().uuid, bis.baseline.uuid, re.sub(r'from stream:','from:',re.sub(r'Create the snapshot for daily build','snapshot daily',re.sub(r'.*cut stream:','cut stream:',bis.baseline.comment)))))
-						workspace,created = Workspace.objects.get_or_create(name='git_verify')
-						if not created:
-							workspace.delete()
-							workspace,created = Workspace.objects.get_or_create(name='git_verify')
-						if workspace.ws_exist():
-							workspace.ws_delete()
-						workspace.ws_create()
-						workspace.component = stream.component
-						workspace.save()
-						workspace.ws_add_component()
-						workspace.stream = stream
-						workspace.save()
-						workspace.ws_set_flowtarget()
-						workspace.baseline = bis.baseline
-						workspace.save()
-						workspace.ws_set_component()
-						#workspace.ws_load()
-						try:
-							sequence = 1
-							lastchangeset = ChangeSet.objects.get(uuid=workspace.ws_last_changeset(),sequence=sequence)
-							while lastchangeset != bis.historys.last():
-								shouter.shout("\t .!. this last changeset (seq %g) @level %g is not correct for %s" % (sequence, lastchangeset.level,  bis.baseline.uuid))
-								sequence += 1
-								lastchangeset = ChangeSet.objects.get(uuid=workspace.ws_last_changeset(),sequence=sequence)
-							shouter.shout("\t... last changeset at level %g" % lastchangeset.level)
-						except ChangeSet.DoesNotExist:
-							shouter.shout("\t .!. did not find the last changeset for baseline %s" % bis.baseline.uuid)
-							input("press any key to continue or break")
-						workspace.ws_delete()
-						time.sleep(2)
-		shouter.shout("\t ... verifying 10 random changesets")
+			pass
+		shouter.shout("\t ... verifying baselines in specified streams")
+		for stream in sorted_streams:
+			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
+			if stream.verified:
+				shouter.shout("\t... stream %s has already been verified" % stream.name)
+				continue
+			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name),'-verify')
+			if not os.path.exists(rtcdir):
+				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+				if not created:
+					ws_verify.delete()
+				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+				if ws_verify.ws_exist():
+					ws_verify.ws_delete()
+				ws_verify.ws_create()
+				ws_verify.component = stream.component
+				ws_verify.stream = stream
+				ws_verify.save()
+				rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
+			for bis in stream.baselineinstream_set.all():
+				if bis.historys.all():
+					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.comment)
+					print("%-4g%-4g %-5g %s %s" % (bis.baseline.level, bis.baseline.bid, bis.lastchangeset.level, bis.lastchangeset.uuid, bis.baseline.uuid))
+					continue
+					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+					if not created:
+						ws_verify.delete()
+					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+					if ws_verify.ws_exist():
+						ws_verify.ws_delete()
+					ws_verify.ws_create()
+					ws_verify.component = stream.component
+					ws_verify.save()
+					ws_verify.ws_add_component()
+					ws_verify.stream = stream
+					ws_verify.save()
+					ws_verify.ws_set_flowtarget()
+					ws_verify.baseline = bis.baseline
+					ws_verify.save()
+					ws_verify.ws_set_component()
+				else:
+					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.comment)
+					#ws_verify.ws_load()
+					#try:
+					#	sequence = 1
+					#	lastchangeset = ChangeSet.objects.get(uuid=ws_verify.ws_last_changeset(),sequence=sequence)
+					#	while lastchangeset != bis.historys.last():
+					#		shouter.shout("\t .!. this last changeset (seq %g) @level %g is not correct for %s" % (sequence, lastchangeset.level,  bis.baseline.uuid))
+					#		sequence += 1
+					#		lastchangeset = ChangeSet.objects.get(uuid=ws_verify.ws_last_changeset(),sequence=sequence)
+					#	shouter.shout("\t... last changeset at level %g" % lastchangeset.level)
+					#except ChangeSet.DoesNotExist:
+					#	shouter.shout("\t .!. did not find the last changeset for baseline %s" % bis.baseline.uuid)
+					#	input("press any key to continue or break")
+					#ws_verify.ws_delete()
+					#time.sleep(2)
+			shouter.shout("\t ... verifying 10 random changesets")
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()

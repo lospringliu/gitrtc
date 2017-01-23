@@ -87,7 +87,7 @@ def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
 			changeset.save()
 			shouter.shout("\t... compressed changeset %s\t%g" % (changeset.uuid, changeset.level))
 
-def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,is_master=False):
+def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,is_master=False,verifying=False):
 	randint = random.randint(100,999)
 	from rtc.models import GitCommit, ChangeSet
 	if not os.path.exists(rtcdir):
@@ -142,33 +142,36 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 #	if not is_master:
 #		changesets = list(workspace.stream.lastchangeset.get_ancestors().filter(migrated=False))
 #		workspace.ws_suspend(rtcdir=rtcdir, changesets=changesets)
-	try:
-		commitid = git_last_commitid(rtcdir=rtcdir)
-		shouter.shout("\t... verify the last commit %s" % commitid)
-		gitcommit = GitCommit.objects.get(commitid=commitid)
-		if gitcommit.changeset:
-			lastchangeset = gitcommit.changeset
-			if lastchangeset.migrated:
-				for cs in lastchangeset.children.all():
-					print(cs)
-					if cs in workspace.stream.lastchangeset.get_ancestors():
-						shouter.shout("\t... verify that the stream migration is never started yet")
-						if cs.migrated:
-							shout("\t!!! got issue to migrate, certain changesets are migrated, manual check please")
-							sys.exit(9)
-			else:
-				shout("\t!!! got issue to migrate, probably the parent branch is not migrated yet")
-				sys.exit(9)
-		else:
-			shouter.shout("\t!!! database not clean, suppose each git commit corresponds to a changeset")
-			sys.exit(9)
-	except subprocess.CalledProcessError:
-		shouter.shout("!!! what happen initializing rtc")
-		sys.exit(9)
-	except GitCommit.DoesNotExist:
-		shouter.shout(".!.do not have this record yet")
-		input("press enter to continue or ctrl+c to break")
 	shell.execute("git config push.default current")
+	if not verifying:
+		try:
+			commitid = git_last_commitid(rtcdir=rtcdir)
+			shouter.shout("\t... verify the last commit %s" % commitid)
+			gitcommit = GitCommit.objects.get(commitid=commitid)
+			if gitcommit.changeset:
+				lastchangeset = gitcommit.changeset
+				if lastchangeset.migrated:
+					for cs in lastchangeset.children.all():
+						print(cs)
+						if cs in workspace.stream.lastchangeset.get_ancestors():
+							shouter.shout("\t... verify that the stream migration is never started yet")
+							if cs.migrated:
+								shout("\t!!! got issue to migrate, certain changesets are migrated, manual check please")
+								sys.exit(9)
+				else:
+					shout("\t!!! got issue to migrate, probably the parent branch is not migrated yet")
+					sys.exit(9)
+			else:
+				shouter.shout("\t!!! database not clean, suppose each git commit corresponds to a changeset")
+				sys.exit(9)
+		except subprocess.CalledProcessError:
+			shouter.shout("!!! what happen initializing rtc")
+			sys.exit(9)
+		except GitCommit.DoesNotExist:
+			shouter.shout(".!.do not have this record yet")
+			input("press enter to continue or ctrl+c to break")
+	else:
+		shouter.shout("\t... bypassing initial check since you are verifying stream/branch anyway")
 		
 def string2datetime(timestring):
 	tsmatch = re.match("^(\d+)-(\w+)-(\d+)\s+(\d+):(\d+)\s+([ap]m)$", timestring.strip(), re.I)

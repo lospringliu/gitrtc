@@ -528,6 +528,7 @@ class Stream(MPTTModel):
 	lastchangeset = TreeForeignKey(ChangeSet,null=True,on_delete=models.SET_NULL,related_name="lastchangesets")
 	firstchangeset = TreeForeignKey(ChangeSet,null=True,on_delete=models.SET_NULL,related_name="firstchangesets")
 	migrated = models.BooleanField(default=False)
+	verified = models.BooleanField(default=False)
 
 	def __str__(self):
 		return self.uuid + " -> " + self.name
