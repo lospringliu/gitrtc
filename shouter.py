@@ -11,7 +11,7 @@ def shoutwithdate(messagetoshout):
 
 
 def safeshout(messagetoshout):
-    print(messagetoshout.encode('utf8').decode(sys.stdout.encoding))
+    print(messagetoshout.encode('utf8').decode('utf-8'))
 
 
 def gettimestamp():
