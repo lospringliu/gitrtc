@@ -22,7 +22,7 @@ def execute(command, outputfile=None, openmode="w"):
 def getoutput(command,clean=True):
     shout_command_to_log(command)
     outputasbytestring = check_output(command, shell=True)
-    output = outputasbytestring.decode(sys.stdout.encoding)
+    output = outputasbytestring.decode('utf8')
     if not clean:
         return output
     output = output.splitlines()
