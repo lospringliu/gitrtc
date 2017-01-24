@@ -290,7 +290,7 @@ if __name__ == '__main__':
 					if bis.lastchangeset and bis.lastchangeset.commit:
 						try:
 							shell.execute("git -C %s checkout -b %s %s" % (rtcdir, bis.baseline.uuid, bis.lastchangeset.commit.commitid))
-							ws_verify.ws_load(loaddir=rtcdir)
+							ws_verify.ws_load(load_dir=rtcdir)
 							shell.execute("git -C %s add -A" % rtcdir)
 							if git_got_changes(gitdir=rtcdir):
 								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.comment)
@@ -304,11 +304,10 @@ if __name__ == '__main__':
 									baseline.verified = True
 									baseline.save()
 						except Exception as e:
-							ws_verify.ws_unload(loaddir=rtcdir)
+							ws_verify.ws_unload(load_dir=rtcdir)
 							raise e
 					else:
 						shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please")
-						sys.exit(9)
 				else:
 					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.comment)
 					#ws_verify.ws_load()
