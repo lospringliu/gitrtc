@@ -267,10 +267,10 @@ if __name__ == '__main__':
 				rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
 			for bis in stream.baselineinstream_set.all():
 				if bis.verified:
-					shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.comment)
+					shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
 					continue
 				if bis.historys.all():
-					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.comment)
+					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
 					print("%-4g%-4g %-5g %s %s" % (bis.baseline.level, bis.baseline.bid, bis.lastchangeset.level, bis.lastchangeset.uuid, bis.baseline.uuid))
 					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
 					if not created:
@@ -300,11 +300,11 @@ if __name__ == '__main__':
 							ws_verify.ws_load(load_dir=rtcdir)
 							shell.getoutput("git -C %s add -A" % rtcdir)
 							if git_got_changes(gitdir=rtcdir):
-								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.comment)
+								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.name)
 								all_verifed = False
 								sys.exit(9)
 							else:
-								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.comment)
+								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.name)
 								bis.verified = True
 								bis.save()
 								baseline = bis.baseline
@@ -320,7 +320,7 @@ if __name__ == '__main__':
 						shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please")
 						all_verifed = False
 				else:
-					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.comment)
+					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
 					all_verifed = False
 					#ws_verify.ws_load()
 					#try:
