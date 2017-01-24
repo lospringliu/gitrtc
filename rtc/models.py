@@ -440,6 +440,7 @@ class Baseline(MPTTModel):
 	#lastchangeset = TreeForeignKey(ChangeSet,null=True,on_delete=models.SET_NULL)
 	migrated = models.BooleanField(default=False)
 	parent = TreeForeignKey('self',null=True,blank=True,related_name='children',on_delete=models.SET_NULL)
+	verified = models.BooleanField(default=False)
 	
 	def __str__(self):
 		return self.name + " (" + self.uuid + ")"
@@ -1345,6 +1346,7 @@ class BaselineInStream(models.Model):
 	firstchangeset = TreeForeignKey(ChangeSet,related_name='firstchangeset',null=True,on_delete=models.SET_NULL)
 	migrated = models.BooleanField(default=False)
 	out_verify = models.TextField(default='')
+	verified = models.BooleanField(default=False)
 	
 	class Meta:
 		unique_together = ('baseline','stream')

@@ -178,6 +178,7 @@ if __name__ == '__main__':
 		shouter.shout("\t ... verifying specified streams ...")
 		filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
 		sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
+		sorted_streams.insert(0,stream0)
 	#	try:
 	#		sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
 	#		sorted_streams.insert(0,stream0)
@@ -251,7 +252,6 @@ if __name__ == '__main__':
 	#		#sys.exi(9)
 		if options.withbaselines:
 			pass
-		shouter.shout("\t ... verifying baselines in specified streams")
 		for stream in sorted_streams:
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
@@ -260,21 +260,17 @@ if __name__ == '__main__':
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
 			if not os.path.exists(rtcdir):
 				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-				if not created:
-					ws_verify.delete()
-				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-				if ws_verify.ws_exist():
-					ws_verify.ws_delete()
-				ws_verify.ws_create()
 				ws_verify.component = stream.component
 				ws_verify.stream = stream
 				ws_verify.save()
 				rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
 			for bis in stream.baselineinstream_set.all():
+				if bis.migrated:
+					shouter.shout("\t... baseline in stream %s had been migrated earlier" % bis.baseline.comment)
+					continue
 				if bis.historys.all():
 					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.comment)
 					print("%-4g%-4g %-5g %s %s" % (bis.baseline.level, bis.baseline.bid, bis.lastchangeset.level, bis.lastchangeset.uuid, bis.baseline.uuid))
-					continue
 					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
 					if not created:
 						ws_verify.delete()
@@ -291,6 +287,28 @@ if __name__ == '__main__':
 					ws_verify.baseline = bis.baseline
 					ws_verify.save()
 					ws_verify.ws_set_component()
+					if bis.lastchangeset and bis.lastchangeset.commit:
+						try:
+							shell.execute("git -C %s checkout -b %s %s" % (rtcdir, bis.baseline.uuid, bis.lastchangeset.commit.commitid))
+							ws_verify.ws_load(loaddir=rtcdir)
+							shell.execute("git -C %s add -A" % rtcdir)
+							if git_got_changes(gitdir=rtcdir):
+								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.comment)
+								sys.exit(9)
+							else:
+								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.comment)
+								bis.verified = True
+								bis.save()
+								baseline = bis.baseline
+								if not baseline.verified:
+									baseline.verified = True
+									baseline.save()
+						except Exception as e:
+							ws_verify.ws_unload(loaddir=rtcdir)
+							raise e
+					else:
+						shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please")
+						sys.exit(9)
 				else:
 					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.comment)
 					#ws_verify.ws_load()
