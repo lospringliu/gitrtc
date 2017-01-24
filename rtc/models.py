@@ -25,6 +25,10 @@ except Exception as e:
 	SQUASH_MAX_TRY = 10
 if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
+try:
+	RTC_DISPLAY_NAME_IN_HISTORY = settings.RTC_DISPLAY_NAME_IN_HISTORY
+except Exception as e:
+	RTC_DISPLAY_NAME_IN_HISTORY = 'RTC'
 
 # Create your models here.
 class Category(models.Model):
@@ -139,50 +143,50 @@ class ChangeSet(MPTTModel):
 		if compress_changesets:
 			shouter.shout("\t.!. changesets compress happens, attention %s" % compress_changesets)
 		os.chdir(rtcdir)
-		if manual:
-			shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
-			out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
-			author = self.author
-			if not author:
-				author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
-			shell.execute('%s' % author.git_config()) 
-			out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
-			print(out_add)
-			command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(self.createtime.isoformat()), rtcdir, shell.quote(self.comment_with_workitem()), shell.quote(self.createtime.isoformat()))
-			try:
-				out_commit = shell.getoutput(command,clean=False) 
-			except subprocess.CalledProcessError:
-				shouter.shout("\t!!! got an issue commit code, here is the info, ctrl + c to break or any other key to continue")
-#				answer = input("\t!!! break to continue")
-				if flagconflict:
-					issues_conflicts = os.path.join(".issues","conflicts")
-					with open(issues_conflicts,'a') as issue:
-						issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
-				else:
-					issues_commits = os.path.join(".issues","commits")
-					with open(issues_commits,'a') as issue:
-						issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
-				out_status = shell.getoutput("git -C %s status -s; exit 0" % rtcdir,clean=False)
-				out_add = shell.getoutput("git -C %s add -A; git -C %s status -s, exit 0" % (rtcdir, rtcdir), clean=False)
-				out_commit = shell.getoutput(command,clean=False) 
-			print(out_commit)
-			out_log = shell.getoutput("git log -1 --pretty=oneline",clean=False)
-			print(out_log)
-			commitid = out_log.split()[0]
-			gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
-			if not created:
-				shouter.shout("!!! got a previously created git commit, invest it")
-				sys.exit(11)
-			self.out_resume = "manual handle"
-			self.out_load = "manual handle"
-			gitcommit.out_status = out_status
-			gitcommit.out_add = out_add
-			gitcommit.out_commit = out_commit
-			gitcommit.save()
-			self.commit = gitcommit
-			self.migrated = True
-			self.save()
-			return True
+	#	if manual:
+	#		shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
+	#		out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
+	#		author = self.author
+	#		if not author:
+	#			author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
+	#		shell.execute('%s' % author.git_config()) 
+	#		out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
+	#		print(out_add)
+	#		command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(self.createtime.isoformat()), rtcdir, shell.quote(self.comment_with_workitem()), shell.quote(self.createtime.isoformat()))
+	#		try:
+	#			out_commit = shell.getoutput(command,clean=False) 
+	#		except subprocess.CalledProcessError:
+	#			shouter.shout("\t!!! got an issue commit code, here is the info, ctrl + c to break or any other key to continue")
+	#			answer = input("\t!!! break to continue")
+	#			if flagconflict:
+	#				issues_conflicts = os.path.join(".issues","conflicts")
+	#				with open(issues_conflicts,'a') as issue:
+	#					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+	#			else:
+	#				issues_commits = os.path.join(".issues","commits")
+	#				with open(issues_commits,'a') as issue:
+	#					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+	#			out_status = shell.getoutput("git -C %s status -s; exit 0" % rtcdir,clean=False)
+	#			out_add = shell.getoutput("git -C %s add -A; git -C %s status -s, exit 0" % (rtcdir, rtcdir), clean=False)
+	#			out_commit = shell.getoutput(command,clean=False) 
+	#		print(out_commit)
+	#		out_log = shell.getoutput("git log -1 --pretty=oneline",clean=False)
+	#		print(out_log)
+	#		commitid = out_log.split()[0]
+	#		gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
+	#		if not created:
+	#			shouter.shout("!!! got a previously created git commit, invest it")
+	#			sys.exit(11)
+	#		self.out_resume = "manual handle"
+	#		self.out_load = "manual handle"
+	#		gitcommit.out_status = out_status
+	#		gitcommit.out_add = out_add
+	#		gitcommit.out_commit = out_commit
+	#		gitcommit.save()
+	#		self.commit = gitcommit
+	#		self.migrated = True
+	#		self.save()
+	#		return True
 		if not self.migrated:
 			out_load = ''
 			out_resume = ''
@@ -250,6 +254,7 @@ class ChangeSet(MPTTModel):
 #						input("enter to continue or ctrl+c to abort")
 #						shell.execute("lscm discard -r rtc %s" % self.uuid)
 #						shell.execute("lscm resolve conflict -r rtc --auto-merge")
+						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 					elif lscmservice.returncode == 3:
 						shouter.shout("\t.!. got return code 3, sleep some time to get the locks back")
 						rtclogin_restart()
@@ -364,7 +369,7 @@ class ChangeSet(MPTTModel):
 				command += self.uuid
 				shell.execute(command)
 				shell.execute("%s status" % scmcommand)
-				shell.execute("git status")
+				shell.execute("git status -s")
 				return lscmservice.returncode
 			else:
 				input("\t.!!show conflict issue, continue or break?")
@@ -1432,6 +1437,23 @@ class Workspace(models.Model):
 		if verbose:
 			return json.loads(shell.getoutput("%s list workspaces -r rtc -v -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
 		return json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
+
+	def ws_remove_conflict_merge(self,rtcdir='',changeset=None):
+		if rtcdir and changeset:
+			os.chdir(rtcdir)
+			output = shell.getoutput("%s show history -r rtc -w %s -C %s -j -m 2" % (scmcommand, self.uuid, self.component.uuid),clean=False)
+			results = json.loads(output)
+			cs_first = None
+			if 'changes' in results.keys():
+				cs_first = results['changes'][0]
+			if cs_first:
+				if cs_first['comment'] == "Merges" and cs_first['author'] == RTC_DISPLAY_NAME_IN_HISTORY:
+					shouter.shout("\t found merge for conflict resolv in workspace, discard it")
+					shell.execute("cd %s ; %s discard -w %s -o %s" % (gitdir, scmcommand, self.uuid, cs_first['uuid']))
+				elif cs_first['uuid'] != changeset.uuid:
+					shouter.shout("\t.!. strange, first changeset's uuid is not the same with the changeset migrating")
+				else:
+					shouter.shout("\t... history first changeset the same with changeset migrating")
 
 	def ws_prepare_initial(self,accept_limit=2000,firstchangeset=None):
 		#shouter.shout("\t.!. place holder, implement better here")
