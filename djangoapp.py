@@ -253,6 +253,7 @@ if __name__ == '__main__':
 		if options.withbaselines:
 			pass
 		for stream in sorted_streams:
+			all_verifed = True
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
 				shouter.shout("\t... stream %s has already been verified" % stream.name)
@@ -295,6 +296,7 @@ if __name__ == '__main__':
 							shell.getoutput("git -C %s add -A" % rtcdir)
 							if git_got_changes(gitdir=rtcdir):
 								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.comment)
+								all_verifed = False
 								sys.exit(9)
 							else:
 								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.comment)
@@ -307,11 +309,14 @@ if __name__ == '__main__':
 							ws_verify.ws_unload(load_dir=rtcdir)
 						except Exception as e:
 							ws_verify.ws_unload(load_dir=rtcdir)
+							all_verifed = False
 							raise e
 					else:
 						shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please")
+						all_verifed = False
 				else:
 					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.comment)
+					all_verifed = False
 					#ws_verify.ws_load()
 					#try:
 					#	sequence = 1
@@ -327,6 +332,9 @@ if __name__ == '__main__':
 					#ws_verify.ws_delete()
 					#time.sleep(2)
 			#shouter.shout("\t ... verifying 10 random changesets")
+			if all_verifed:
+				stream.verified = True
+				stream.save()
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()
