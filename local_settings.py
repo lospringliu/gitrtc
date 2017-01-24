@@ -4,6 +4,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 rtc_url = ''
 rtc_user = ''
 rtc_pass = ''
+RTC_DISPLAY_NAME_IN_HISTORY = 'RTC' ## you have to replace this in order to discard merges from conflict resolv
+
 ## when reporting, show # of changesets before and after for each stream
 levelinterval = 10
 ## when reporting, show this range of changesets for each stream
