@@ -258,15 +258,16 @@ if __name__ == '__main__':
 				shouter.shout("\t... stream %s has already been verified" % stream.name)
 				continue
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
-			if not os.path.exists(rtcdir):
-				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-				ws_verify.component = stream.component
-				ws_verify.stream = stream
-				ws_verify.save()
-				rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
+			if os.path.exists(rtcdir):
+				shell.getoutput("rm -fr %s" % rtcdir )
+			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+			ws_verify.component = stream.component
+			ws_verify.stream = stream
+			ws_verify.save()
+			rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
 			for bis in stream.baselineinstream_set.all():
-				if bis.migrated:
-					shouter.shout("\t... baseline in stream %s had been migrated earlier" % bis.baseline.comment)
+				if bis.verified:
+					shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.comment)
 					continue
 				if bis.historys.all():
 					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.comment)
@@ -289,9 +290,9 @@ if __name__ == '__main__':
 					ws_verify.ws_set_component()
 					if bis.lastchangeset and bis.lastchangeset.commit:
 						try:
-							shell.execute("git -C %s checkout -b %s %s" % (rtcdir, bis.baseline.uuid, bis.lastchangeset.commit.commitid))
+							shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, bis.baseline.uuid, bis.lastchangeset.commit.commitid))
 							ws_verify.ws_load(load_dir=rtcdir)
-							shell.execute("git -C %s add -A" % rtcdir)
+							shell.getoutput("git -C %s add -A" % rtcdir)
 							if git_got_changes(gitdir=rtcdir):
 								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.comment)
 								sys.exit(9)
@@ -303,6 +304,7 @@ if __name__ == '__main__':
 								if not baseline.verified:
 									baseline.verified = True
 									baseline.save()
+							ws_verify.ws_unload(load_dir=rtcdir)
 						except Exception as e:
 							ws_verify.ws_unload(load_dir=rtcdir)
 							raise e
