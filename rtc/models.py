@@ -1629,8 +1629,6 @@ class Workspace(models.Model):
 					shouter.shout("\t!!! does not have information for changeset %s like comments or workitems, pleaset update it" % changeset.uuid)
 					sys.exit(9)
 				if changeset.createtime > cs_create_time:
-					if changeset.level > 10 and changeset.parent.createtime < cs_create_time:
-						self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 					cs_create_time = changeset.createtime
 				else:
 					if SQUASH_AGGRESIVE:
@@ -1649,6 +1647,9 @@ class Workspace(models.Model):
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets)
+				if changeset.createtime == cs_create_time and changeset.level > 10 and changeset.parent.parent.createtime < cs_create_time:
+					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
+
 				if compress_changesets2 != compress_changesets:
 					shouter.shout(".!. detected changeset compress, pay attention please")
 					compress_changesets = compress_changesets2.copy()
