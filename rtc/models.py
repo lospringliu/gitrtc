@@ -1629,6 +1629,8 @@ class Workspace(models.Model):
 					shouter.shout("\t!!! does not have information for changeset %s like comments or workitems, pleaset update it" % changeset.uuid)
 					sys.exit(9)
 				if changeset.createtime > cs_create_time:
+					if changeset.level > 10 and changeset.parent.createtime < cs_create_time:
+						self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 					cs_create_time = changeset.createtime
 				else:
 					if SQUASH_AGGRESIVE:
@@ -1666,7 +1668,7 @@ class Workspace(models.Model):
 					if True:
 						shouter.shout("\t...offer a chance to break or continue")
 						time.sleep(5)
-				shouter.shout("\tpushnum = %g ; level = %g" % (pushnum, changeset.level))
+				shouter.shout("\tnext:\tpushnum = %g ; level = %g" % (pushnum, changeset.level))
 			shell.execute("git -C %s push" % rtcdir)
 			#shell.execute("git -C %s push --tags" % rtcdir)
 			stream = self.stream
