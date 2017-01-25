@@ -105,7 +105,7 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 				gitattribute.writelines("* text=auto\n\n*.c text\n*.cpp text\n*.h text\n*.java text\n*.py text\n\n*.svg binary\n*.png binary\n*.jpg binary\n*.gif binary\n*.rpm binary\n*.jar binary\n*.tar binary\n*.tar.gz binary\n*.Z binary\n")
 			shell.execute("git -C %s add -A" % rtcdir)
 			changeset0 = ChangeSet.objects.all()[0]
-			items = rtc_show_history(workspace=workspace,component=component)
+			items = rtc_show_history(workspace=workspace,component=component,maxitems=1)
 			if not 'changes' in items.keys() or len(items['changes']) != 1 or items['changes'][0]['uuid'] != changeset0.uuid:
 				shouter.shout("\t!!! got incorrect initializing, inspect it manually please")
 				sys.exit(9)

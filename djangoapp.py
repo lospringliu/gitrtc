@@ -844,8 +844,8 @@ if __name__ == '__main__':
 				if last_migrated_changeset.commit.commitid != commitid:
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
-				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=1)
-				if not 'changes' in items.keys() or len(items['changes']) != 1 or items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
+				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
+				if not 'changes' in items.keys() or len(items['changes']) != 2 or ( items['changes'][0]['uuid'] != last_migrated_changeset.uuid and items['changes'][1] != last_migrated_changeset :
 					shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 					sys.exit(9)
 				#if not ws_migrate.stream.migrated:
@@ -929,8 +929,8 @@ if __name__ == '__main__':
 				if last_migrated_changeset.commit.commitid != commitid:
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
-				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=1)
-				if not 'changes' in items.keys() or len(items['changes']) != 1 or items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
+				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
+				if not 'changes' in items.keys() or len(items['changes']) != 2 or ( items['changes'][0]['uuid'] != last_migrated_changeset.uuid and items['changes'][1] != last_migrated_changeset :
 					shouter.shout("\t!!! got incorrect resuming for last changeset, inspect it manually please")
 					sys.exit(9)
 				#if not ws_migrate.stream.migrated:
