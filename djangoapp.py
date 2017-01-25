@@ -850,7 +850,7 @@ if __name__ == '__main__':
 					sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
-						if items['changes'][1]['comment'] != "Merges":
+						if items['changes'][0]['comment'] != "Merges":
 							shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 							sys.exit(9)
 						elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
@@ -945,7 +945,7 @@ if __name__ == '__main__':
 					sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
-						if items['changes'][1]['comment'] != "Merges":
+						if items['changes'][0]['comment'] != "Merges":
 							shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 							sys.exit(9)
 						elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
