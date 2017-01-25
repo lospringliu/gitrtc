@@ -1449,7 +1449,11 @@ class Workspace(models.Model):
 			if cs_first:
 				if cs_first['comment'] == "Merges" and cs_first['author'] == RTC_DISPLAY_NAME_IN_HISTORY:
 					shouter.shout("\t found merge for conflict resolv in workspace, discard it")
-					shell.execute("cd %s ; %s discard -w %s -o %s" % (gitdir, scmcommand, self.uuid, cs_first['uuid']))
+					try:
+						shell.execute("cd %s ; %s discard -w %s -o %s" % (gitdir, scmcommand, self.uuid, cs_first['uuid']))
+					except Exception as e:
+						shouter.shout("\t.!. problem discarding changeset %s" % cs_first['comment'])
+						print(e)
 				elif cs_first['uuid'] != changeset.uuid:
 					shouter.shout("\t.!. strange, first changeset's uuid is not the same with the changeset migrating")
 				else:
@@ -1901,12 +1905,14 @@ class Workspace(models.Model):
 		if type(info) == type({}) and 'name' in info.keys() and 'uuid' in info.keys() and info['name'] == self.name:
 			self.uuid = info['uuid']
 			self.save()
-			if self.component:
-				shouter.shout("\t ... adding component to workspace %s" % self.name)
-				self.ws_add_component()
 			if self.stream:
 				shouter.shout("\t ... set flow target for workspace %s to stream %s" % (self.name,self.stream.name))
 				self.ws_set_flowtarget()
+			elif self.component:
+				shouter.shout("\t ... adding component to workspace %s" % self.name)
+				self.ws_add_component()
+			else:
+				pass
 		else:
 			shouter.shout("\t!!! got issue creating workspace %s" % self.name)
 
