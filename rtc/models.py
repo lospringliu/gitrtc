@@ -143,50 +143,52 @@ class ChangeSet(MPTTModel):
 		if compress_changesets:
 			shouter.shout("\t.!. changesets compress happens, attention %s" % compress_changesets)
 		os.chdir(rtcdir)
-	#	if manual:
-	#		shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
-	#		out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
-	#		author = self.author
-	#		if not author:
-	#			author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
-	#		shell.execute('%s' % author.git_config()) 
-	#		out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
-	#		print(out_add)
-	#		command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(self.createtime.isoformat()), rtcdir, shell.quote(self.comment_with_workitem()), shell.quote(self.createtime.isoformat()))
-	#		try:
-	#			out_commit = shell.getoutput(command,clean=False) 
-	#		except subprocess.CalledProcessError:
-	#			shouter.shout("\t!!! got an issue commit code, here is the info, ctrl + c to break or any other key to continue")
-	#			answer = input("\t!!! break to continue")
-	#			if flagconflict:
-	#				issues_conflicts = os.path.join(".issues","conflicts")
-	#				with open(issues_conflicts,'a') as issue:
-	#					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
-	#			else:
-	#				issues_commits = os.path.join(".issues","commits")
-	#				with open(issues_commits,'a') as issue:
-	#					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
-	#			out_status = shell.getoutput("git -C %s status -s; exit 0" % rtcdir,clean=False)
-	#			out_add = shell.getoutput("git -C %s add -A; git -C %s status -s, exit 0" % (rtcdir, rtcdir), clean=False)
-	#			out_commit = shell.getoutput(command,clean=False) 
-	#		print(out_commit)
-	#		out_log = shell.getoutput("git log -1 --pretty=oneline",clean=False)
-	#		print(out_log)
-	#		commitid = out_log.split()[0]
-	#		gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
-	#		if not created:
-	#			shouter.shout("!!! got a previously created git commit, invest it")
-	#			sys.exit(11)
-	#		self.out_resume = "manual handle"
-	#		self.out_load = "manual handle"
-	#		gitcommit.out_status = out_status
-	#		gitcommit.out_add = out_add
-	#		gitcommit.out_commit = out_commit
-	#		gitcommit.save()
-	#		self.commit = gitcommit
-	#		self.migrated = True
-	#		self.save()
-	#		return True
+		if manual:
+			shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
+			out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
+			author = self.author
+			if not author:
+				author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
+			shell.execute('%s' % author.git_config()) 
+			out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
+			print(out_add)
+			command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(self.createtime.isoformat()), rtcdir, shell.quote(self.comment_with_workitem()), shell.quote(self.createtime.isoformat()))
+			try:
+				out_commit = shell.getoutput(command,clean=False) 
+			except subprocess.CalledProcessError:
+				shouter.shout("\t!!! got an issue commit code, here is the info, ctrl + c to break or any other key to continue")
+				pprint.pprint(out_resume)
+				print(out_add)
+				print("--->>> logging this issue to .issues/commits")
+				time.sleep(5)
+				issues_commits = os.path.join(".issues","commits")
+				with open(issues_commits,'a') as issue:
+					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+				out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
+				out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
+				out_commit = shell.getoutput(command,clean=False) 
+			print(out_commit)
+			out_log = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir,clean=False)
+			print(out_log)
+			commitid = out_log.split()[0]
+			gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
+			if not created:
+				shouter.shout("!!! got a previously created git commit, invest it")
+				sys.exit(11)
+			if flagconflict:
+				issues_conflicts = os.path.join(".issues","conflicts")
+				with open(issues_conflicts,'a') as issue:
+					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+			self.out_resume = "manual handle"
+			self.out_load = "manual handle"
+			gitcommit.out_status = out_status
+			gitcommit.out_add = out_add
+			gitcommit.out_commit = out_commit
+			gitcommit.save()
+			self.commit = gitcommit
+			self.migrated = True
+			self.save()
+			return True
 		if not self.migrated:
 			out_load = ''
 			out_resume = ''
