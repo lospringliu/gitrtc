@@ -845,9 +845,15 @@ if __name__ == '__main__':
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
 				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
-				if not 'changes' in items.keys() or len(items['changes']) != 2 or ( items['changes'][0]['uuid'] != last_migrated_changeset.uuid and items['changes'][1]['uuid'] != last_migrated_changeset.uuid ):
-					shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
-					sys.exit(9)
+				if not 'changes' in items.keys() or len(items['changes']) != 2 or items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
+					if items['comment'] != "Merges":
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
+					elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
+						shouter.shout("\t.!. you have a conflict merge in your workspace already, pay attention")
+					else:
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
 				#if not ws_migrate.stream.migrated:
 				if ws_migrate.stream.lastchangeset.get_ancestors().filter(migrated=False).first().parent != last_migrated_changeset:
 					shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
@@ -930,7 +936,15 @@ if __name__ == '__main__':
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
 				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
-				if not 'changes' in items.keys() or len(items['changes']) != 2 or ( items['changes'][0]['uuid'] != last_migrated_changeset.uuid and items['changes'][1]['uuid'] != last_migrated_changeset.uuid ):
+				if not 'changes' in items.keys() or len(items['changes']) != 2 or items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
+					if items['comment'] != "Merges":
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
+					elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
+						shouter.shout("\t.!. you have a conflict merge in your workspace already, pay attention")
+					else:
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
 					shouter.shout("\t!!! got incorrect resuming for last changeset, inspect it manually please")
 					sys.exit(9)
 				#if not ws_migrate.stream.migrated:
