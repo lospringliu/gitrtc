@@ -175,12 +175,12 @@ if __name__ == '__main__':
 		except Stream.DoesNotExist:
 			shouter.shout("\t!!! stream you specified does not exist")
 	elif options.infoverify:
-		shouter.shout("\t ... verifying specified streams ...")
-		filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
-		sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
-		sorted_streams.insert(0,stream0)
 		if not options.streams:
 			sorted_streams = [stream0]
+		else:
+			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
+			sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
+			sorted_streams.insert(0,stream0)
 	#	try:
 	#		sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
 	#		sorted_streams.insert(0,stream0)
