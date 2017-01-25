@@ -1662,7 +1662,7 @@ class Workspace(models.Model):
 					for s in changeset.firstchangesets.all():
 						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
 						shell.execute("git -C %s checkout \"%s\"" % (rtcdir,self.stream.name))
-						print(subprocess.check_output("git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
+						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
 					pushnum = 1
