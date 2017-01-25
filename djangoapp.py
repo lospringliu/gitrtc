@@ -304,6 +304,7 @@ if __name__ == '__main__':
 							if git_got_changes(gitdir=rtcdir):
 								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.name)
 								all_verifed = False
+								ws_verify.ws_unload(load_dir=rtcdir)
 								sys.exit(9)
 							else:
 								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.name)
