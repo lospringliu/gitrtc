@@ -1452,7 +1452,7 @@ class Workspace(models.Model):
 				if cs_first['comment'] == "Merges" and cs_first['author'] == RTC_DISPLAY_NAME_IN_HISTORY:
 					shouter.shout("\t found merge for conflict resolv in workspace, discard it")
 					try:
-						shell.execute("cd %s ; %s discard -w %s -o %s" % (gitdir, scmcommand, self.uuid, cs_first['uuid']))
+						shell.execute("cd %s ; %s discard -w %s -o %s" % (rtcdir, scmcommand, self.uuid, cs_first['uuid']))
 					except Exception as e:
 						shouter.shout("\t.!. problem discarding changeset %s" % cs_first['comment'])
 						print(e)
