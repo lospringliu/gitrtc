@@ -1625,6 +1625,7 @@ class Workspace(models.Model):
 			else:
 				cs_create_time = datetime.datetime(1980,1,1)
 			for changeset in list(self.stream.lastchangeset.get_ancestors().filter(migrated=False)) + [self.stream.lastchangeset]:
+				cs_create_time_old = cs_create_time
 				if not changeset.compared:
 					shouter.shout("\t!!! does not have information for changeset %s like comments or workitems, pleaset update it" % changeset.uuid)
 					sys.exit(9)
@@ -1647,7 +1648,7 @@ class Workspace(models.Model):
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets)
-				if changeset.createtime == cs_create_time and changeset.level > 10 and changeset.parent.parent.createtime < cs_create_time:
+				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 
 				if compress_changesets2 != compress_changesets:
