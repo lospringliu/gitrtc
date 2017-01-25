@@ -853,7 +853,7 @@ if __name__ == '__main__':
 						if items['changes'][0]['comment'] != "Merges":
 							shouter.shout("\t!!! got incorrect resuming (first history not last migrated), inspect it manually please")
 							sys.exit(9)
-						elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
+						elif items['changes'][1]['uuid'] == last_migrated_changeset.uuid:
 							shouter.shout("\t... aside from the merge, 2nd history item is the last migrated")
 							shouter.shout("\t.!. you have a conflict merge in your workspace already, pay attention")
 						else:
@@ -949,7 +949,7 @@ if __name__ == '__main__':
 						if items['changes'][0]['comment'] != "Merges":
 							shouter.shout("\t!!! got incorrect resuming (first history not last migrated), inspect it manually please")
 							sys.exit(9)
-						elif items['changes'][1]['uuid'] != last_migrated_changeset.uuid:
+						elif items['changes'][1]['uuid'] == last_migrated_changeset.uuid:
 							shouter.shout("\t... aside from the merge, 2nd history item is the last migrated")
 							shouter.shout("\t.!. you have a conflict merge in your workspace already, pay attention")
 						else:
