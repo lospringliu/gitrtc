@@ -541,6 +541,17 @@ class Stream(MPTTModel):
 	def __str__(self):
 		return self.uuid + " -> " + self.name
 
+	def git_sync_children_streams(self,rtcdir='.'):
+		if not self.firstchangeset or not self.lastchangeset or not self.migrated:
+			shouter.shout("\t... nothing to update, not migrated or no firstchangeset or no lastchangeset")
+			sys.exit(0)
+		for changeset in list(self.lastchangeset.get_ancestors().filter(level__gt=self.firstchangeset.level)) + [self.lastchangeset]:
+			if changeset.firstchangesets.all():
+				for s in changeset.firstchangesets.all():
+					print(subprocess.check_output("git -C %s checkout -b %s %s" % (rtcdir, re.sub(r' ','',s.name), changeset.commit.commitid),shell=True).decode())
+					shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.name)))
+					print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
+
 	def determine_branching(self,stream0=None):
 		if stream0:
 			c0 = None
@@ -1676,7 +1687,7 @@ class Workspace(models.Model):
 					shell.execute("git -C %s push" % rtcdir)
 					for s in changeset.firstchangesets.all():
 						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
-						shell.execute("git -C %s checkout \"%s\"" % (rtcdir,self.stream.name))
+						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
 						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
