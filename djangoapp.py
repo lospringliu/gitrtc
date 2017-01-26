@@ -9,9 +9,11 @@ import pprint
 from optparse import OptionParser
 from django.core.mail import send_mail
 import imp
+
 DJANGOPATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(DJANGOPATH)
 os.environ["DJANGO_SETTINGS_MODULE"] = "gitrtc.settings"
+
 parser = OptionParser()
 parser.add_option("--verbose",action="store_true",dest="verbose",help="seeing more info")
 parser.add_option("--infoinit",help="information initialize for rtc", action="store_true")
