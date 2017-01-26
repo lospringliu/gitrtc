@@ -252,6 +252,14 @@ def rtclogin_restart():
 	time.sleep(5)
 
 def rtc_show_history(workspace=None, component=None, maxitems=1):
+	if not component:
+		if workspace.component:
+			component = workspace.component
+		elif workspace.stream and workspace.stream.component:
+			componnt = workspace.stream.component
+		else:
+			shouter.shout("\t.!. can not figure out the component to show history for")
+			raise ValueError("Component info not available")
 	command = "%s show history -r rtc -w %s -m %g -j -C %s" % (scmcommand, workspace.uuid, maxitems, component.uuid)
 	return json.loads(shell.getoutput(command,clean=False))
 		

@@ -305,7 +305,7 @@ if __name__ == '__main__':
 								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.name)
 								all_verifed = False
 								ws_verify.ws_unload(load_dir=rtcdir)
-								sys.exit(9)
+								shouter.shout("any key to continue verify next baseline in stream or break here")
 							else:
 								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.name)
 								bis.verified = True
