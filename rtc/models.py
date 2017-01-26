@@ -444,7 +444,7 @@ class Baseline(MPTTModel):
 	component = models.ForeignKey(Component)
 	historys = models.ManyToManyField(ChangeSet,blank=True)
 	historys_processed = models.BooleanField(default=False)
-	#lastchangeset = TreeForeignKey(ChangeSet,null=True,on_delete=models.SET_NULL)
+	lastchangeset = TreeForeignKey(ChangeSet,related_name="baselines_lastchangeset_set",blank=True,null=True,default=None,on_delete=models.SET_NULL)
 	migrated = models.BooleanField(default=False)
 	parent = TreeForeignKey('self',null=True,blank=True,related_name='children',on_delete=models.SET_NULL)
 	verified = models.BooleanField(default=False)
@@ -1465,6 +1465,8 @@ class Workspace(models.Model):
 		#shouter.shout("\t.!. place holder, implement better here")
 		if not self.stream:
 			raise ValueError("\t!!! can not prepare initial status, no stream assocciated")
+		starting_baseline = None
+		starting_baseline_lastchangeset = None
 		if not firstchangeset:
 			firstchangeset = self.stream.firstchangeset
 		bis0 = None
@@ -1479,8 +1481,25 @@ class Workspace(models.Model):
 					if baselineinstream.lastchangeset.level <= firstchangeset.level and baselineinstream.lastchangeset.level > bis0.lastchangeset.level :
 						bis0 = baselineinstream
 		if bis0:
-			shouter.shout("\t...found the proper baseline @%g to create the workspace for migration of stream %s" % (bis0.lastchangeset.level,self.stream.name))
-			self.baseline = bis0.baseline
+			starting_baseline = bis0.baseline
+			starting_baseline_lastchangeset = bis0.lastchangeset
+				
+		## otherwise, create empty workspace and accept the changesets
+		else:
+			queryset_templates =  Baseline.objects.filter(verified=True).filter(level=0).filter(lastchangeset__isnull=False)
+			if queryset_templates:
+				for qs_template in queryset_templates:
+					if not starting_baseline:
+						starting_baseline = qs_template
+						starting_baseline_lastchangeset = qs_template.lastchangeset
+					elif qs_template.lastchangeset.level < firstchangeset.level and qs_template.lastchangeset.level > starting_baseline_lastchangeset.level:
+						starting_baseline = qs_template
+						starting_baseline_lastchangeset = qs_template.lastchangeset
+					else:
+						pass
+		if starting_baseline and starting_baseline_lastchangeset:
+			shouter.shout("\t...found the proper baseline @%g to create the workspace for migration of stream %s" % (starting_baseline_lastchangeset.level,self.stream.name))
+			self.baseline = starting_baseline
 			self.save()
 			self.ws_add_component()
 			self.ws_list_component()
@@ -1488,31 +1507,27 @@ class Workspace(models.Model):
 			self.ws_list_flowtarget()
 			self.ws_set_flowtarget()
 			self.ws_list_flowtarget()
-			if bis0.lastchangeset.level < firstchangeset.level:
+			if starting_baseline_lastchangeset.level < firstchangeset.level:
 				### baseline and accept some changesets
-				if firstchangeset.get_ancestors().filter(level__gt=bis0.lastchangeset.level).count() > accept_limit:
-					N = firstchangeset.get_ancestors().filter(level__gt=bis0.lastchangeset.level).count() // accept_limit
+				if firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() > accept_limit:
+					N = firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() // accept_limit
 					input("\t\t.!.!.! ooooooooooops, we have to accept multiple times to prepare workspace for migration, continue?")
 					for t in range(N):
 						command = "%s accept -c -N -r rtc -t %s --no-merge -o " % (scmcommand, self.uuid)
-						for changeset in firstchangeset.get_ancestors().filter(level__gt=bis0.lastchangeset.level)[t * accept_limit:t * accept_limit + accept_limit]:
+						for changeset in firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level)[t * accept_limit:t * accept_limit + accept_limit]:
 							command += changeset.uuid + " "
 						print(shell.getoutput(command,clean=False))
 					command = "%s accept -c -N -r rtc -t %s --no-merge -o " % (scmcommand, self.uuid)
-					for changeset in firstchangeset.get_ancestors().filter(level__gt=bis0.lastchangeset.level)[N * accept_limit:]:
+					for changeset in firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level)[N * accept_limit:]:
 						command += changeset.uuid + " "
 					command += firstchangeset.uuid
 					print(shell.getoutput(command,clean=False))
 				else:
 					command = "%s accept -c -N -r rtc -t %s --no-merge -o " % (scmcommand, self.uuid)
-					for changeset in firstchangeset.get_ancestors().filter(level__gt=bis0.lastchangeset.level):
+					for changeset in firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level):
 						command += changeset.uuid + " "
 					command += firstchangeset.uuid
 					print(shell.getoutput(command,clean=False))
-			else:
-				pass
-				
-		## otherwise, create empty workspace and accept the changesets
 		else:
 			shouter.shout("\t...did not find the proper baseline to create the workspace for migration of stream %s" % self.stream.name)
 			self.ws_add_component()
