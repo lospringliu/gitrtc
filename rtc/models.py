@@ -1491,10 +1491,20 @@ class Workspace(models.Model):
 				else:
 					if baselineinstream.lastchangeset.level <= firstchangeset.level and baselineinstream.lastchangeset.level > bis0.lastchangeset.level :
 						bis0 = baselineinstream
+		if not bis0:
+			for baselineinstream in BaselineInStream.objects.filter(stream=self.stream):
+				baseline = baselineinstream.baseline
+				if baselineinstream.lastchangeset:
+					if not bis0:
+						if baselineinstream.lastchangeset.level >= firstchangeset.level and baselineinstream.lastchangeset.level < firstchangeset.level + 2000:
+							bis0 = baselineinstream
+					else:
+						if baselineinstream.lastchangeset.level >= firstchangeset.level and baselineinstream.lastchangeset.level < bis0.lastchangeset.level :
+							bis0 = baselineinstream
 		if bis0:
 			starting_baseline = bis0.baseline
 			starting_baseline_lastchangeset = bis0.lastchangeset
-				
+
 		## otherwise, create empty workspace and accept the changesets
 		else:
 			queryset_templates =  Baseline.objects.filter(verified=True).filter(level=0).filter(lastchangeset__isnull=False)
@@ -1539,6 +1549,13 @@ class Workspace(models.Model):
 						command += changeset.uuid + " "
 					command += firstchangeset.uuid
 					print(shell.getoutput(command,clean=False))
+			else:
+				### baseline and drop some changesets
+				command = "%s discard -N -r rtc -w %s -o " % (scmcommand, self.uuid)
+				for changeset in starting_baseline_lastchangeset.get_ancestors().filter(level__gt=firstchangeset.level):
+					command += changeset.uuid + " "
+				command += starting_baseline_lastchangeset.uuid
+				print(shell.getoutput(command,clean=False))
 		else:
 			shouter.shout("\t...did not find the proper baseline to create the workspace for migration of stream %s" % self.stream.name)
 			self.ws_add_component()
