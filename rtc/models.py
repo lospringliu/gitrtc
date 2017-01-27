@@ -136,7 +136,7 @@ class ChangeSet(MPTTModel):
 		#	wiinfo = re.sub(r', $',': ',wiinfo)
 		return wiinfo + self.comment
 
-	def resume(self,workspace,use_accept=False,manual=False,flagconflict=False,on_conflict='resolve',rtcdir='',compress_changesets=[],timestamp=None):
+	def resume(self,workspace,use_accept=False,manual=False,flagconflict=False,on_conflict='resolve',rtcdir='',compress_changesets=[],timestamp=None,checkpoint=False):
 		if not rtcdir:
 			shouter.shout("\t!!! you did not specify rtcdir")
 			sys.exit(9)
@@ -281,6 +281,10 @@ class ChangeSet(MPTTModel):
 						raise ValueError("!!! Got unexpected resume error, lscm returned %g" % lscmservice.returncode)
 #				time.sleep(1)
 				shell.execute("sync")
+				if checkpoint:
+					workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
+					time.sleep(2)
+					workspace.ws_load(load_dir=rtcdir)
 				if self.level % FORCELOAD == FORCELOAD - 1:
 					shouter.shout("...... force load workspace for level %g" % self.level)
 					time.sleep(2)
@@ -540,6 +544,9 @@ class Stream(MPTTModel):
 
 	def __str__(self):
 		return self.uuid + " -> " + self.name
+
+	def validate_branchingpoint(self):
+		pass
 
 	def git_sync_children_streams(self,rtcdir='.'):
 		if not self.firstchangeset or not self.lastchangeset or not self.migrated:
@@ -1369,8 +1376,13 @@ class BaselineInStream(models.Model):
 	class Meta:
 		unique_together = ('baseline','stream')
 		ordering = ('stream','-baseline')
+
 	def __str__(self):
 		return "stream %s -> baseline %s" % (self.stream.uuid, self.baseline.uuid)
+
+	def validate_baseline(self):
+		pass
+
 	def update(self,changesets=[]):
 		changesetp = None
 		numitems = len(changesets)
@@ -1660,15 +1672,24 @@ class Workspace(models.Model):
 		os.chdir(rtcdir)
 		pushnum = 1
 		## remove snapshot based part, do not keep them
-		if not self.snapshot and self.stream and self.stream.lastchangeset:
-			shouter.shout("\t...stream based migration")
+		if self.stream and self.stream.lastchangeset:
+			shouter.shout("\t...performing stream based migration")
+			bis_list = list(BaselineInStream.objects.filter(stream=self.stream))
+			stream_list = sorted(list(self.stream.children.all()), key = lambda x: x.firstchangeset.level)
 			qs_migrated = self.stream.lastchangeset.get_ancestors().filter(migrated=True).exclude(level=0).order_by('-createtime')
 			if qs_migrated:
 				cs_create_time = qs_migrated[0].createtime
 			else:
 				cs_create_time = datetime.datetime(1980,1,1)
+
 			for changeset in list(self.stream.lastchangeset.get_ancestors().filter(migrated=False)) + [self.stream.lastchangeset]:
+				bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
+				stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 				cs_create_time_old = cs_create_time
+				checkpoint = Fasle
+
+				if stream_list_filtered or bis_list_filtered:
+					checkpoint = True
 				if not changeset.compared:
 					shouter.shout("\t!!! does not have information for changeset %s like comments or workitems, pleaset update it" % changeset.uuid)
 					sys.exit(9)
@@ -1677,8 +1698,9 @@ class Workspace(models.Model):
 				else:
 					if SQUASH_AGGRESIVE:
 						shouter.shout("\t.!. changeset %g %s is squashable changesets, fast forwarding ..." % (changeset.level, changeset.uuid))
-						compress_changesets.append(changeset.uuid)
-						continue
+						if not checkpoint:
+							compress_changesets.append(changeset.uuid)
+							continue
 					else:
 						shouter.shout("\t.!. changeset %g %s is squashable, but let us try our best to keep the history ..." % (changeset.level, changeset.uuid))
 						if ChangeSet.objects.filter(uuid=changeset.uuid).count() > 1:
@@ -1686,11 +1708,14 @@ class Workspace(models.Model):
 								shouter.shout("\t.!..!. multiple delivered changeset #%g: let us try our best to keep the history up to 10 ..." % (len(compress_changesets)))
 							else:
 								shouter.shout("\t.!..!. multiple delivered changesets more than %g, compress it ..." % SQUASH_MAX_TRY)
-								compress_changesets.append(changeset.uuid)
-								continue
+								if not checkpoint:
+									compress_changesets.append(changeset.uuid)
+									continue
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
-				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets)
+				if checkpoint:
+					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
+				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets,checkpoint=checkpoint)
 				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 
@@ -1700,12 +1725,18 @@ class Workspace(models.Model):
 					with open(json_compress_changesets,'w') as f:
 						json.dump(compress_changesets,f)
 				changeset = ChangeSet.objects.get(id=changeset.id)
-				if changeset.firstchangesets.all():
+				if stream_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
-					for s in changeset.firstchangesets.all():
+					for s in stream_list_filtered:
 						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
 						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
 						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
+						shouter.shout("\t... verifying branching point for %s in sync %s <=> %s" % (s.name, changeset.uuid, changeset.commit.commitid))
+						s.validate_branchingpoint()
+				if bis_list_filtered:
+					for bis in bis_list_filtered:
+						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
+						bis.validate_baseline()
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
 					pushnum = 1
