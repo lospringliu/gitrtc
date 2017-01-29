@@ -1687,7 +1687,7 @@ class Workspace(models.Model):
 				bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
 				stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 				cs_create_time_old = cs_create_time
-				checkpoint = Fasle
+				checkpoint = False
 
 				if stream_list_filtered or bis_list_filtered:
 					checkpoint = True
