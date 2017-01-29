@@ -541,12 +541,13 @@ class Stream(MPTTModel):
 	firstchangeset = TreeForeignKey(ChangeSet,null=True,on_delete=models.SET_NULL,related_name="firstchangesets")
 	migrated = models.BooleanField(default=False)
 	verified = models.BooleanField(default=False)
+	validated = models.BooleanField(default=False)
 
 	def __str__(self):
 		return self.uuid + " -> " + self.name
 
 	def validate_branchingpoint(self):
-		pass
+		return False
 
 	def git_sync_children_streams(self,rtcdir='.'):
 		if not self.firstchangeset or not self.lastchangeset or not self.migrated:
@@ -1381,7 +1382,7 @@ class BaselineInStream(models.Model):
 		return "stream %s -> baseline %s" % (self.stream.uuid, self.baseline.uuid)
 
 	def validate_baseline(self):
-		pass
+		return False
 
 	def update(self,changesets=[]):
 		changesetp = None
@@ -1732,11 +1733,27 @@ class Workspace(models.Model):
 						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
 						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
 						shouter.shout("\t... verifying branching point for %s in sync %s <=> %s" % (s.name, changeset.uuid, changeset.commit.commitid))
-						s.validate_branchingpoint()
+						validated = s.validate_branchingpoint()
+						if not validated:
+							shouter.shout("\t.!. branching point validation failed")
+							raise ValueError("Validation failed")
+						else:
+							s.validated = True
+							s.save()
 				if bis_list_filtered:
 					for bis in bis_list_filtered:
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
-						bis.validate_baseline()
+						validated = bis.validate_baseline()
+						if not validated:
+							shouter.shout("\t.!. baseline in stream validation failed")
+							raise ValueError("Validation failed")
+						else:
+							bis.verified = True
+							bis.save()
+							baseline = bis.baseline
+							if not baseline.verified:
+								baseline.verified = True
+								baseline.save()
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
 					pushnum = 1

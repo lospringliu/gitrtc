@@ -45,10 +45,12 @@ def notify_admin(subject='notify_subject from %s' % NODE_NAME, body='', mail_fro
 		print(subject)
 		print(body)
 
-def git_got_changes(gitdir=None):
+def git_got_changes(gitdir=None, logical=True):
 	if not gitdir:
 		gitdir = '.'
 	output = shell.getoutput("git -C %s status -s" % gitdir,clean=False)
+	if not logical:
+		return output.strip()
 	return output and output.strip() 
 
 def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
