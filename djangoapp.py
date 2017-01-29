@@ -284,14 +284,14 @@ if __name__ == '__main__':
 						ws_verify.ws_delete()
 					ws_verify.ws_create()
 					ws_verify.component = stream.component
-					ws_verify.save()
-					ws_verify.ws_add_component()
+					ws_verify.baseline = bis.baseline
 					ws_verify.stream = stream
 					ws_verify.save()
+					ws_verify.ws_add_component()
+					ws_verify.ws_list_component()
 					ws_verify.ws_set_flowtarget()
-					ws_verify.baseline = bis.baseline
-					ws_verify.save()
-					ws_verify.ws_set_component()
+					ws_verify.ws_list_flowtarget()
+					#ws_verify.ws_set_component()
 					if bis.lastchangeset and bis.lastchangeset.commit:
 						try:
 							output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)

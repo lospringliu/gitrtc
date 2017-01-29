@@ -1537,8 +1537,8 @@ class Workspace(models.Model):
 			self.save()
 			self.ws_add_component()
 			self.ws_list_component()
-			self.ws_unset_flowtarget()
-			self.ws_list_flowtarget()
+			#self.ws_unset_flowtarget()
+			#self.ws_list_flowtarget()
 			self.ws_set_flowtarget()
 			self.ws_list_flowtarget()
 			if starting_baseline_lastchangeset.level < firstchangeset.level:
