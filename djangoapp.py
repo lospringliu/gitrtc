@@ -852,7 +852,7 @@ if __name__ == '__main__':
 						shouter.shout("\t... got only 1 changeset, good for streambase")
 					else:
 						shouter.shout("\t!!! got incorrect resuming (history error), inspect it manually please")
-					sys.exit(9)
+						sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
 						if items['changes'][0]['comment'] != "Merges":
