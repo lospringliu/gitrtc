@@ -848,7 +848,10 @@ if __name__ == '__main__':
 					sys.exit(9)
 				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
 				if not 'changes' in items.keys() or len(items['changes']) != 2:
-					shouter.shout("\t!!! got incorrect resuming (history error), inspect it manually please")
+					if len(items['changes']) == 1 and items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
+						shouter.shout("\t... got only 1 changeset, good for streambase")
+					else:
+						shouter.shout("\t!!! got incorrect resuming (history error), inspect it manually please")
 					sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
