@@ -1439,8 +1439,10 @@ class BaselineInStream(models.Model):
 					output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
 					if re.match(".*%s" % self.baseline.uuid, output):
 						if git_got_changes(gitdir=rtcdir):
-							shell.getoutput("git -C %s commit -m test -a" % rtcdir, clean=False)
+							shell.getoutput("git -C %s add -A" % rtcdir, clean=False)
+							shell.getoutput("git -C %s commit -m test" % rtcdir, clean=False)
 						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
+						shell.getoutput("git -C %s pull" % ( rtcdir))
 						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
 					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
 					ws_verify.ws_load(load_dir=rtcdir)
