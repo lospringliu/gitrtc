@@ -1646,7 +1646,7 @@ class Workspace(models.Model):
 			else:
 				### baseline and drop some changesets
 				command = "%s discard -N -r rtc -w %s -o " % (scmcommand, self.uuid)
-				for changeset in starting_baseline_lastchangeset.get_ancestors().filter(level__gt=firstchangeset.level):
+				for changeset in starting_baseline_lastchangeset.get_ancestors().filter(level__gt=firstchangeset.level + 1):
 					command += changeset.uuid + " "
 				command += starting_baseline_lastchangeset.uuid
 				print(shell.getoutput(command,clean=False))
