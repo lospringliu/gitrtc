@@ -946,7 +946,7 @@ if __name__ == '__main__':
 				shouter.shout("\t... accepting all changeset up to branching point")
 				shouter.shout("\t... trying to continue the existing migration for non-trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
-				shell.run("git -C %s pull" % gitdir)
+				shell.execute("git -C %s pull" % gitdir)
 				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
