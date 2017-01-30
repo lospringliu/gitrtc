@@ -777,14 +777,14 @@ if __name__ == '__main__':
 					flag_do_migrate = True
 					if created:
 						shouter.shout("\t... starting the brand new migration for trunk stream %s" % stream.name)
-						if ws_migrate.ws_exist():
-							ws_migrate.ws_delete()
+						if ws_migrate.ws_exist(stream=stream):
+							ws_migrate.ws_delete(stream=stream)
 						ws_migrate.uuid = ''
 						ws_migrate.snapshot = None
 						ws_migrate.save()
 						ws_migrate.ws_create()
-						ws_migrate.ws_update()
-						ws_migrate.ws_list()
+						ws_migrate.ws_update(stream=stream)
+						ws_migrate.ws_list(stream=stream)
 						ws_migrate.stream = stream
 						ws_migrate.component = stream.component
 						ws_migrate.save()
@@ -855,9 +855,9 @@ if __name__ == '__main__':
 					if created:
 						shouter.shout("\t... starting the brand new migration for non-trunk stream %s" % stream.name)
 						shouter.shout("\t... let us automate the workspace to migrate")
-						if ws_migrate.ws_exist():
+						if ws_migrate.ws_exist(stream=stream):
 							### delete existing workspace
-							ws_migrate.ws_delete()
+							ws_migrate.ws_delete(stream=stream)
 							ws_migrate.uuid = ''
 							ws_migrate.save()
 						#else:
@@ -869,8 +869,8 @@ if __name__ == '__main__':
 						ws_migrate.component = stream.component
 						ws_migrate.save()
 
-						ws_migrate.ws_update()
-						ws_migrate.ws_list()
+						ws_migrate.ws_update(stream=stream)
+						ws_migrate.ws_list(stream=stream)
 
 						ws_migrate.ws_prepare_initial()
 					#	ws_migrate.stream = stream

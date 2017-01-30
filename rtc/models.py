@@ -461,8 +461,8 @@ class Baseline(MPTTModel):
 			self.save()
 	def update_lastchangeset(self):
 		ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-		if ws_history.ws_exist():
-			ws_history.ws_delete()
+		if ws_history.ws_exist(stream=self.stream,component=self.component):
+			ws_history.ws_delete(stream=self.stream,component=self.component)
 		ws_history.uuid = ''
 		ws_history.stream = None
 		ws_history.snapshot = None
@@ -477,7 +477,7 @@ class Baseline(MPTTModel):
 		ws_history.save()
 		ws_history.ws_add_component()
 		ws_history.ws_list_changesets()
-		ws_history.ws_delete()
+		ws_history.ws_delete(stream=self.stream,component=self.component)
 
 
 class Snapshot(MPTTModel):
@@ -552,7 +552,7 @@ class Stream(MPTTModel):
 		changesets = self.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
 		workspace_stream = 'git_migrate_%s_%s' % (self.component.name, re.sub(r' ','', self.name))
 		ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
-		if ws_migrate.ws_exist():
+		if ws_migrate.ws_exist(stream=self):
 			shouter.shout("\t!!! Can not validate, workspace exists already, please inspect")
 			return False
 		ws_migrate.stream = None
@@ -641,8 +641,8 @@ class Stream(MPTTModel):
 			sys.exit(9)
 		else:
 			ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-			if ws_history.ws_exist():
-				ws_history.ws_delete()
+			if ws_history.ws_exist(stream=self):
+				ws_history.ws_delete(stream=self)
 			ws_history.uuid = ''
 			ws_history.stream = None
 			ws_history.snapshot = None
@@ -1220,8 +1220,8 @@ class Stream(MPTTModel):
 									uuids.reverse()
 							else:
 								ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-								if ws_history.ws_exist():
-									ws_history.ws_delete()
+								if ws_history.ws_exist(stream=self):
+									ws_history.ws_delete(stream=self)
 								ws_history.uuid = ''
 								ws_history.stream = None
 								ws_history.snapshot = None
@@ -1423,8 +1423,8 @@ class BaselineInStream(models.Model):
 			if not created:
 				ws_verify.delete()
 			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
-			if ws_verify.ws_exist():
-				ws_verify.ws_delete()
+			if ws_verify.ws_exist(stream=self.stream):
+				ws_verify.ws_delete(stream=self)
 			ws_verify.ws_create()
 			ws_verify.component = self.stream.component
 			ws_verify.baseline = self.baseline
@@ -1558,13 +1558,26 @@ class Workspace(models.Model):
 	def __str__(self):
 		return self.name
 
-	def ws_list(self,verbose=False):
+	def ws_list(self,verbose=False,component=None,stream=None):
+		if not stream:
+			stream = self.stream
+
+		if not component:
+			component = self.component
+		if not component:
+			if self.stream:
+				component = self.stream.component
+			elif stream:
+				component = stream.component
+			else:
+				pass
 		if verbose:
 			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -v -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
 		else:
 			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
 		if json_r:
-			return list(filter(lambda x: x['name'] == "git_migrate_%s_%s" % ( self.stream.component.name, re.sub(r' ','',self.stream.name)), json_r))
+			if component and stream:
+				return list(filter(lambda x: x['name'] == "git_migrate_%s_%s" % ( component.name, re.sub(r' ','',self.stream.name)), json_r))
 		else:
 			return json_r
 
@@ -2018,21 +2031,34 @@ class Workspace(models.Model):
 			shouter.shout("did not find changesets associated with workspace %s" % self.name)
 		return len(items['changes']) 
 
-	def ws_update(self):
+	def ws_update(self,stream=None,component=None):
 		if not self.uuid:
-			if self.ws_exist():
-				self.uuid = self.ws_list()[0]['uuid']
+			if self.ws_exist(stream=stream,component=component):
+				self.uuid = self.ws_list(stream=stream,component=component)[0]['uuid']
 				self.save()
 		else:
-			if not self.ws_exist():
+			if not self.ws_exist(stream=stream,component=component):
 				self.uuid = ''
 				self.save()
 			else:
-				if self.uuid != self.ws_list()[0]['uuid']:
-					self.uuid = self.ws_list()[0]['uuid']
+				if self.uuid != self.ws_list(stream=stream,component=component)[0]['uuid']:
+					self.uuid = self.ws_list(stream=stream,component=component)[0]['uuid']
 					self.save()
-	def ws_exist(self):
-		return len(self.ws_list())
+
+	def ws_exist(self,component=None,stream=None):
+		if not stream:
+			stream = self.stream
+		if not component:
+			component = self.component
+		if not component:
+			if self.stream:
+				component = self.stream.component
+			elif stream:
+				component = stream
+			else:
+				pass
+		return len(self.ws_list(component=component,stream=stream))
+
 	def ws_compare(self,to_snapshot=None,from_snapshot=None):
 		if self.stream:
 			if self.snapshot:
@@ -2138,19 +2164,19 @@ class Workspace(models.Model):
 			shouter.shout("\t!!! can not unload, check workspace please")
 			return "no uuid to load"
 
-	def ws_delete(self):
-		if self.ws_exist():
-			self.ws_update()
+	def ws_delete(self,stream=None,component=None):
+		if self.ws_exist(stream=stream,component=component):
+			self.ws_update(stream=stream,component=component)
 		if self.uuid:
 			shell.execute("%s delete workspace -r rtc  %s" % (scmcommand,self.uuid))
-			if not self.ws_exist():
+			if not self.ws_exist(stream=stream,component=component):
 				if self.uuid:
 					self.uuid = ''
 					self.save()
 		else:
 			shell.execute("%s delete workspace -r rtc  %s" % (scmcommand,self.name))
 			shouter.shout("\t.!. tried to delete with workspace name, check workspace please")
-		self.ws_update()
+		self.ws_update(stream=stream,component=component)
 
 	def ws_list_flowtarget(self):
 		if self.uuid:
