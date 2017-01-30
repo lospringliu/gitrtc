@@ -1435,15 +1435,15 @@ class BaselineInStream(models.Model):
 			if lastchangeset:
 				lastchangeset.refresh_from_db()
 			if lastchangeset and lastchangeset.commit:
-					shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
-					if git_got_changes(gitdir=rtcdir):
-						shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
-					shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
-					shell.getoutput("git -C %s pull" % ( rtcdir))
-					output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
-					if re.match(".*%s" % self.baseline.uuid, output):
-						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
-					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
+				shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
+				if git_got_changes(gitdir=rtcdir):
+					shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
+				shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
+				shell.getoutput("git -C %s pull" % ( rtcdir))
+				output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
+				if re.match(".*%s" % self.baseline.uuid, output):
+					shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
+				shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
 				try:
 					ws_verify.ws_load(load_dir=rtcdir)
 					shell.getoutput("git -C %s add -A" % rtcdir)
