@@ -1800,6 +1800,7 @@ class Workspace(models.Model):
 				if checkpoint:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets,checkpoint=checkpoint)
+				changeset = ChangeSet.objects.get(id=changeset.id)
 				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 
