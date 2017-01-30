@@ -1435,21 +1435,24 @@ class BaselineInStream(models.Model):
 			if lastchangeset:
 				lastchangeset.refresh_from_db()
 			if lastchangeset and lastchangeset.commit:
-				try:
+					shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
+					if git_got_changes(gitdir=rtcdir):
+						shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
+					shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
+					shell.getoutput("git -C %s pull" % ( rtcdir))
 					output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
 					if re.match(".*%s" % self.baseline.uuid, output):
-						if git_got_changes(gitdir=rtcdir):
-							shell.getoutput("git -C %s add -A" % rtcdir, clean=False)
-							shell.getoutput("git -C %s commit -m test" % rtcdir, clean=False)
-						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
-						shell.getoutput("git -C %s pull" % ( rtcdir))
 						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
 					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
+				try:
 					ws_verify.ws_load(load_dir=rtcdir)
 					shell.getoutput("git -C %s add -A" % rtcdir)
 					if git_got_changes(gitdir=rtcdir):
 						shouter.shout("\t!!! verification for baseline in stream %s failed" % self.baseline.name)
 						ws_verify.ws_unload(load_dir=rtcdir)
+						shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
+						if git_got_changes(gitdir=rtcdir):
+							shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
 						print(git_got_changes(gitdir=rtcdir, logical=False))
 						return False
 					else:
@@ -1461,9 +1464,15 @@ class BaselineInStream(models.Model):
 							baseline.verified = True
 							baseline.save()
 						ws_verify.ws_unload(load_dir=rtcdir)
+						shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
+						if git_got_changes(gitdir=rtcdir):
+							shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
 						return True
 				except Exception as e:
 					ws_verify.ws_unload(load_dir=rtcdir)
+					shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
+					if git_got_changes(gitdir=rtcdir):
+						shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
 			else:
 				shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please" % self.baseline.name)
 		else:
@@ -1827,7 +1836,7 @@ class Workspace(models.Model):
 							shouter.shout("\t.!. branching point validation failed")
 							raise ValueError("Validation failed")
 						else:
-							shouter.shout("\t... branching point validated for %s" % s.name)
+							shouter.shout("\t... branching point for %s VALIDATED\n" % s.name)
 				if bis_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
 					for bis in bis_list_filtered:
@@ -1838,7 +1847,7 @@ class Workspace(models.Model):
 							shouter.shout("\t.!. baseline in stream validation failed")
 							raise ValueError("Validation failed")
 						else:
-							shouter.shout("\t... baseline in stream validated")
+							shouter.shout("\t... baseline in stream VALIDATED\n")
 				os.chdir(rtcdir)
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
