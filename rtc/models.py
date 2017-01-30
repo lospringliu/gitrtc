@@ -563,7 +563,7 @@ class Stream(MPTTModel):
 		ws_migrate.ws_update()
 		ws_migrate.ws_list()
 		ws_migrate.ws_prepare_initial()
-		rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=component0)
+		rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=self.component)
 		if git_got_changes(gitdir=rtcdir):
 			return False
 		else:
@@ -1829,6 +1829,7 @@ class Workspace(models.Model):
 							raise ValueError("Validation failed")
 						else:
 							shouter.shout("\t... baseline in stream validated")
+				os.chdir(rtcdir)
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
 					pushnum = 1
