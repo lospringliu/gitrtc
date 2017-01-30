@@ -2124,7 +2124,7 @@ class Workspace(models.Model):
 
 	def ws_unload(self,load_dir='.'):
 		if self.uuid:
-			return shell.getoutput("cd %s ; %s unload -r rtc -i -D -w %s -C %s" % (load_dir,scmcommand,self.uuid,self.component.uuid),clean=False)
+			return shell.getoutput("%s unload -d %s -r rtc -i -N -w %s -C %s" % (scmcommand,load_dir,self.uuid,self.component.uuid),clean=False)
 		else:
 			shouter.shout("\t!!! can not unload, check workspace please")
 			return "no uuid to load"
