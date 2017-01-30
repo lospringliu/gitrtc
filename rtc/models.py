@@ -567,6 +567,8 @@ class Stream(MPTTModel):
 		if git_got_changes(gitdir=rtcdir):
 			return False
 		else:
+			self.validated = True
+			self.save()
 			return True
 
 	def git_sync_children_streams(self,rtcdir='.'):
@@ -1402,6 +1404,65 @@ class BaselineInStream(models.Model):
 		return "stream %s -> baseline %s" % (self.stream.uuid, self.baseline.uuid)
 
 	def validate_baseline(self):
+		gitdir = os.path.join(migration_top,self.stream.component.name,'gitdir')
+		rtcdir = os.path.join(migration_top,self.stream.component.name,'rtcdir',re.sub(r' ','',stream.name) + '_verify')
+		if not os.path.exists(rtcdir):
+			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
+			ws_verify.component = self.stream.component
+			ws_verify.stream = self.stream
+			ws_verify.save()
+			rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=self.stream.component,verifying=True)
+		if self.historys.all():
+			shouter.shout("\t... verifying baseline in stream %s" % self.baseline.name)
+			print("%-4g%-4g %-5g %s %s" % (self.baseline.level, self.baseline.bid, self.lastchangeset.level, self.lastchangeset.uuid, self.baseline.uuid))
+			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
+			if not created:
+				ws_verify.delete()
+			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
+			if ws_verify.ws_exist():
+				ws_verify.ws_delete()
+			ws_verify.ws_create()
+			ws_verify.component = self.stream.component
+			ws_verify.baseline = self.baseline
+			ws_verify.stream = self.stream
+			ws_verify.save()
+			ws_verify.ws_add_component()
+			ws_verify.ws_list_component()
+			ws_verify.ws_set_flowtarget()
+			ws_verify.ws_list_flowtarget()
+			#ws_verify.ws_set_component()
+			if self.lastchangeset and self.lastchangeset.commit:
+				try:
+					output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
+					if re.match(".*%s" % self.baseline.uuid, output):
+						if git_got_changes(gitdir=rtcdir):
+							shell.getoutput("git -C %s commit -m test -a" % rtcdir, clean=False)
+						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
+						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
+					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, self.lastchangeset.commit.commitid))
+					ws_verify.ws_load(load_dir=rtcdir)
+					shell.getoutput("git -C %s add -A" % rtcdir)
+					if git_got_changes(gitdir=rtcdir):
+						shouter.shout("\t!!! verification for baseline in stream %s failed" % self.baseline.name)
+						ws_verify.ws_unload(load_dir=rtcdir)
+						print(git_got_changes(gitdir=rtcdir, logical=False))
+						return False
+					else:
+						shouter.shout("\t... verification for baseline in stream %s passed" % self.baseline.name)
+						self.verified = True
+						self.save()
+						baseline = self.baseline
+						if not baseline.verified:
+							baseline.verified = True
+							baseline.save()
+						ws_verify.ws_unload(load_dir=rtcdir)
+						return True
+				except Exception as e:
+					ws_verify.ws_unload(load_dir=rtcdir)
+			else:
+				shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please" % self.baseline.name)
+		else:
+			shouter.shout("\t.!. bypassing baseline in stream %s" % self.baseline.name)
 		return False
 
 	def update(self,changesets=[]):
@@ -1758,8 +1819,7 @@ class Workspace(models.Model):
 							shouter.shout("\t.!. branching point validation failed")
 							raise ValueError("Validation failed")
 						else:
-							s.validated = True
-							s.save()
+							shouter.shout("\t... branching point validated for %s" % s.name)
 				if bis_list_filtered:
 					for bis in bis_list_filtered:
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
@@ -1768,12 +1828,7 @@ class Workspace(models.Model):
 							shouter.shout("\t.!. baseline in stream validation failed")
 							raise ValueError("Validation failed")
 						else:
-							bis.verified = True
-							bis.save()
-							baseline = bis.baseline
-							if not baseline.verified:
-								baseline.verified = True
-								baseline.save()
+							shouter.shout("\t... baseline in stream validated")
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
 					pushnum = 1
