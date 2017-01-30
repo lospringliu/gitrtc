@@ -1590,10 +1590,10 @@ class Workspace(models.Model):
 				baseline = baselineinstream.baseline
 				if baselineinstream.lastchangeset:
 					if not bis0:
-						if baselineinstream.lastchangeset.level >= firstchangeset.level and baselineinstream.lastchangeset.level < firstchangeset.level + 2000:
+						if baselineinstream.lastchangeset.level > firstchangeset.level and baselineinstream.lastchangeset.level < firstchangeset.level + 2000:
 							bis0 = baselineinstream
 					else:
-						if baselineinstream.lastchangeset.level >= firstchangeset.level and baselineinstream.lastchangeset.level < bis0.lastchangeset.level :
+						if baselineinstream.lastchangeset.level > firstchangeset.level and baselineinstream.lastchangeset.level < bis0.lastchangeset.level :
 							bis0 = baselineinstream
 		if bis0:
 			starting_baseline = bis0.baseline
@@ -1622,7 +1622,9 @@ class Workspace(models.Model):
 			#self.ws_list_flowtarget()
 			self.ws_set_flowtarget()
 			self.ws_list_flowtarget()
-			if starting_baseline_lastchangeset.level < firstchangeset.level:
+			if starting_baseline_lastchangeset.level == firstchangeset.level:
+				pass
+			elif starting_baseline_lastchangeset.level < firstchangeset.level:
 				### baseline and accept some changesets
 				if firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() > accept_limit:
 					N = firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() // accept_limit
@@ -1646,7 +1648,7 @@ class Workspace(models.Model):
 			else:
 				### baseline and drop some changesets
 				command = "%s discard -N -r rtc -w %s -o " % (scmcommand, self.uuid)
-				for changeset in starting_baseline_lastchangeset.get_ancestors().filter(level__gt=firstchangeset.level + 1):
+				for changeset in starting_baseline_lastchangeset.get_ancestors().filter(level__gt=firstchangeset.level):
 					command += changeset.uuid + " "
 				command += starting_baseline_lastchangeset.uuid
 				print(shell.getoutput(command,clean=False))
