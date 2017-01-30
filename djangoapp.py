@@ -949,7 +949,12 @@ if __name__ == '__main__':
 				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
-				if last_migrated_changeset.commit.commitid != commitid:
+				if commitid == stream.lastchangeset.commit.commitid:
+					shouter.shout("\t... already migrated to the end, mark migrated if not yet")
+					if not stream.migrated:
+						stream.migrated = True
+						stream.save()
+				elif last_migrated_changeset.commit.commitid != commitid:
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
 				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
