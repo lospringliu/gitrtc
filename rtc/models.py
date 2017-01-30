@@ -1,4 +1,4 @@
-from django.db import models
+from jango.db import models
 
 from django.conf import settings
 from mptt.models import  MPTTModel, TreeForeignKey
@@ -1556,8 +1556,13 @@ class Workspace(models.Model):
 
 	def ws_list(self,verbose=False):
 		if verbose:
-			return json.loads(shell.getoutput("%s list workspaces -r rtc -v -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
-		return json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
+			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -v -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
+		else:
+			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
+		if json_r:
+			return list(filter(lambda x: x['name'] == re.sub(r'.*git_migrate_utopia_','',self.name), json_r))
+		else:
+			return json_r
 
 	def ws_remove_conflict_merge(self,rtcdir='',changeset=None):
 		if rtcdir and changeset:
