@@ -295,12 +295,15 @@ if __name__ == '__main__':
 					stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 					for ss in stream_list_filtered:
 						ss.refresh_from_db()
-						validated = ss.validate_branchingpoint()
-						if not validated:
-							shouter.shout("\t.!. branching point validation failed for stream %s" % ss.name)
-							raise ValueError("Validation failed")
+						if ss.validated:
+							shouter.shout("\t... branching point %s has been already VALIDATED" % ss.name)
 						else:
-							shouter.shout("\t... branching point for %s VALIDATED\n" % ss.name)
+							validated = ss.validate_branchingpoint()
+							if not validated:
+								shouter.shout("\t.!. branching point validation failed for stream %s" % ss.name)
+								raise ValueError("Validation failed")
+							else:
+								shouter.shout("\t... branching point for %s VALIDATED\n" % ss.name)
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()
