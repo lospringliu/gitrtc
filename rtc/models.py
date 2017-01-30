@@ -549,12 +549,16 @@ class Stream(MPTTModel):
 	def validate_branchingpoint(self):
 		gitdir = os.path.join(migration_top,self.component.name,'gitdir')
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))
-		changesets = list(self.lastchangeset.get_ancestors().filter(migrated=False)) + [self.lastchangeset]
+		changesets = self.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
 		workspace_stream = 'git_migrate_%s_%s' % (self.component.name, re.sub(r' ','', self.name))
 		ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
 		if ws_migrate.ws_exist():
 			shouter.shout("\t!!! Can not validate, workspace exists already, please inspect")
 			return False
+		ws_migrate.stream = None
+		ws_migrate.component = None
+		ws_migrate.baseline = None
+		ws_migrate.save()
 		ws_migrate.ws_create()
 		### set .stream and .component property
 		ws_migrate.stream = self
