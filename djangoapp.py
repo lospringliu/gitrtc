@@ -875,7 +875,7 @@ if __name__ == '__main__':
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
-			changesets = list(stream.lastchangeset.get_ancestors().filter(migrated=False))
+			changesets = list(stream.lastchangeset.get_ancestors().filter(migrated=False)) + [stream.lastchangeset]
 			flag_do_migrate = False
 
 			if not post_incremental:

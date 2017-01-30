@@ -547,7 +547,27 @@ class Stream(MPTTModel):
 		return self.uuid + " -> " + self.name
 
 	def validate_branchingpoint(self):
-		return False
+		gitdir = os.path.join(migration_top,self.component.name,'gitdir')
+		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))
+		changesets = list(self.lastchangeset.get_ancestors().filter(migrated=False)) + [self.lastchangeset]
+		workspace_stream = 'git_migrate_%s_%s' % (self.component.name, re.sub(r' ','', self.name))
+		ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
+		if ws_migrate.ws_exist():
+			shouter.shout("\t!!! Can not validate, workspace exists already, please inspect")
+			return False
+		ws_migrate.ws_create()
+		### set .stream and .component property
+		ws_migrate.stream = self
+		ws_migrate.component = self.component
+		ws_migrate.save()
+		ws_migrate.ws_update()
+		ws_migrate.ws_list()
+		ws_migrate.ws_prepare_initial()
+		rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=component0)
+		if git_got_changes(gitdir=rtcdir):
+			return False
+		else:
+			return True
 
 	def git_sync_children_streams(self,rtcdir='.'):
 		if not self.firstchangeset or not self.lastchangeset or not self.migrated:
