@@ -1827,6 +1827,7 @@ class Workspace(models.Model):
 						else:
 							shouter.shout("\t... branching point validated for %s" % s.name)
 				if bis_list_filtered:
+					shell.execute("git -C %s push" % rtcdir)
 					for bis in bis_list_filtered:
 						bis.refresh_from_db()
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
