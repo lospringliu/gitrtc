@@ -29,6 +29,7 @@ parser.add_option("--withchangesets",help="write information about stream to fil
 parser.add_option("--writehistory",help="write stream history to file", action="store_true")
 parser.add_option("--infoverify",help="verify stream with git branch making sure the baselines in stream is correct", action="store_true")
 parser.add_option("--withbaselines",help="write or verify stream with baselines in stream", action="store_true")
+parser.add_option("--withbranchingpoints",help="verify branching points of a stream in streams specified", action="store_true")
 parser.add_option("--withfirstbaselineinstream",help="print first baseline in stream to help relationship", action="store_true")
 parser.add_option("--withbranchingpoint",help="print the branching point", action="store_true")
 parser.add_option("--migrate",help="migrate base stream", action="store_true")
@@ -257,6 +258,7 @@ if __name__ == '__main__':
 		if options.withbaselines:
 			pass
 		for stream in sorted_streams:
+			stream.refresh_from_db()
 			all_verifed = True
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
@@ -275,76 +277,30 @@ if __name__ == '__main__':
 					continue
 				if bis.historys.all():
 					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
-					print("%-4g%-4g %-5g %s %s" % (bis.baseline.level, bis.baseline.bid, bis.lastchangeset.level, bis.lastchangeset.uuid, bis.baseline.uuid))
-					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-					if not created:
-						ws_verify.delete()
-					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-					if ws_verify.ws_exist():
-						ws_verify.ws_delete()
-					ws_verify.ws_create()
-					ws_verify.component = stream.component
-					ws_verify.baseline = bis.baseline
-					ws_verify.stream = stream
-					ws_verify.save()
-					ws_verify.ws_add_component()
-					ws_verify.ws_list_component()
-					ws_verify.ws_set_flowtarget()
-					ws_verify.ws_list_flowtarget()
-					#ws_verify.ws_set_component()
-					if bis.lastchangeset and bis.lastchangeset.commit:
-						try:
-							output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
-							if re.match(".*%s" % bis.baseline.uuid, output):
-								if git_got_changes(gitdir=rtcdir):
-									shell.getoutput("git -C %s commit -m test -a" % rtcdir, clean=False)
-								shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',stream.name)))
-								shell.getoutput("git -C %s branch -D %s" % ( rtcdir, bis.baseline.uuid))
-							shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, bis.baseline.uuid, bis.lastchangeset.commit.commitid))
-							ws_verify.ws_load(load_dir=rtcdir)
-							shell.getoutput("git -C %s add -A" % rtcdir)
-							if git_got_changes(gitdir=rtcdir):
-								shouter.shout("\t!!! verification for baseline in stream %s failed" % bis.baseline.name)
-								all_verifed = False
-								ws_verify.ws_unload(load_dir=rtcdir)
-								shouter.shout("any key to continue verify next baseline in stream or break here")
-							else:
-								shouter.shout("\t... verification for baseline in stream %s passed" % bis.baseline.name)
-								bis.verified = True
-								bis.save()
-								baseline = bis.baseline
-								if not baseline.verified:
-									baseline.verified = True
-									baseline.save()
-							ws_verify.ws_unload(load_dir=rtcdir)
-						except Exception as e:
-							ws_verify.ws_unload(load_dir=rtcdir)
-							all_verifed = False
-							raise e
-					else:
-						shouter.shout("\t!!! baseline in stream %s can not be verified, manual check please")
-						all_verifed = False
+					verified = bis.validate_baseline()
+					if not verified:
+						all_verified = False
 				else:
 					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
 					all_verifed = False
-					#ws_verify.ws_load()
-					#try:
-					#	sequence = 1
-					#	lastchangeset = ChangeSet.objects.get(uuid=ws_verify.ws_last_changeset(),sequence=sequence)
-					#	while lastchangeset != bis.historys.last():
-					#		shouter.shout("\t .!. this last changeset (seq %g) @level %g is not correct for %s" % (sequence, lastchangeset.level,  bis.baseline.uuid))
-					#		sequence += 1
-					#		lastchangeset = ChangeSet.objects.get(uuid=ws_verify.ws_last_changeset(),sequence=sequence)
-					#	shouter.shout("\t... last changeset at level %g" % lastchangeset.level)
-					#except ChangeSet.DoesNotExist:
-					#	shouter.shout("\t .!. did not find the last changeset for baseline %s" % bis.baseline.uuid)
-					#	input("press any key to continue or break")
-					#ws_verify.ws_delete()
-					#time.sleep(2)
 			#shouter.shout("\t ... verifying 10 random changesets")
 			if all_verifed:
 				stream.verified = True
 				stream.save()
+		if options.withbranchingpoints:
+			for stream in sorted_streams:
+				stream.refresh_from_db()
+				stream_list = sorted(list(self.stream.children.all()), key = lambda x: x.firstchangeset.level)
+				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
+					stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
+					for ss in stream_list_filtered:
+						ss.refresh_from_db()
+						validated = ss.validate_branchingpoint()
+						if not validated:
+							shouter.shout("\t.!. branching point validation failed for stream %s" % ss.name)
+							raise ValueError("Validation failed")
+						else:
+							shouter.shout("\t... branching point for %s VALIDATED\n" % ss.name)
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()
