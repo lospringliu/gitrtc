@@ -1800,7 +1800,6 @@ class Workspace(models.Model):
 				if checkpoint:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets,checkpoint=checkpoint)
-				changeset = ChangeSet.objects.get(id=changeset.id)
 				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
 
@@ -1809,10 +1808,11 @@ class Workspace(models.Model):
 					compress_changesets = compress_changesets2.copy()
 					with open(json_compress_changesets,'w') as f:
 						json.dump(compress_changesets,f)
-				changeset = ChangeSet.objects.get(id=changeset.id)
+				changeset.refresh_from_db()
 				if stream_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
 					for s in stream_list_filtered:
+						s.refresh_from_db()
 						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
 						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
 						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
@@ -1825,6 +1825,7 @@ class Workspace(models.Model):
 							shouter.shout("\t... branching point validated for %s" % s.name)
 				if bis_list_filtered:
 					for bis in bis_list_filtered:
+						bis.refresh_from_db()
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
 						validated = bis.validate_baseline()
 						if not validated:
