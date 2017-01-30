@@ -1,4 +1,4 @@
-from jango.db import models
+from django.db import models
 
 from django.conf import settings
 from mptt.models import  MPTTModel, TreeForeignKey
