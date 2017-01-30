@@ -1626,7 +1626,7 @@ class Workspace(models.Model):
 				### baseline and accept some changesets
 				if firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() > accept_limit:
 					N = firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level).count() // accept_limit
-					input("\t\t.!.!.! ooooooooooops, we have to accept multiple times to prepare workspace for migration, continue?")
+					shouter.shout("\t\t.!.!.! ooooooooooops, we have to accept multiple times to prepare workspace for migration, continue?")
 					for t in range(N):
 						command = "%s accept -c -N -r rtc -t %s --no-merge -o " % (scmcommand, self.uuid)
 						for changeset in firstchangeset.get_ancestors().filter(level__gt=starting_baseline_lastchangeset.level)[t * accept_limit:t * accept_limit + accept_limit]:
@@ -1658,7 +1658,7 @@ class Workspace(models.Model):
 			self.ws_list_flowtarget()
 			if firstchangeset.get_ancestors().filter(level__gt=0).count() > accept_limit:
 				N = firstchangeset.get_ancestors().filter(level__gt=0).count() // accept_limit
-				input("\t\t.!.!.! ooooooooooops, we have to accept multiple times to prepare workspace for migration, continue?")
+				shouter.shout("\t\t.!.!.! ooooooooooops, we have to accept multiple times to prepare workspace for migration, continue?")
 				for t in range(N):
 					command = "%s accept -c -N -r rtc -t %s --no-merge -o " % (scmcommand, self.uuid)
 					for changeset in firstchangeset.get_ancestors().filter(level__gt=0)[t * accept_limit:t * accept_limit + accept_limit]:
