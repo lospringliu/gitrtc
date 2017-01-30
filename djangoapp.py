@@ -290,7 +290,7 @@ if __name__ == '__main__':
 		if options.withbranchingpoints:
 			for stream in sorted_streams:
 				stream.refresh_from_db()
-				stream_list = sorted(list(self.stream.children.all()), key = lambda x: x.firstchangeset.level)
+				stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
 				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
 					stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 					for ss in stream_list_filtered:
