@@ -1458,7 +1458,7 @@ class BaselineInStream(models.Model):
 						if not baseline.verified:
 							baseline.verified = True
 							baseline.save()
-						ws_verify.ws_unload(load_dir=rtcdir)
+						#ws_verify.ws_unload(load_dir=rtcdir)
 						return True
 				except Exception as e:
 					ws_verify.ws_unload(load_dir=rtcdir)
