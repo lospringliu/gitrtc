@@ -1431,7 +1431,10 @@ class BaselineInStream(models.Model):
 			ws_verify.ws_set_flowtarget()
 			ws_verify.ws_list_flowtarget()
 			#ws_verify.ws_set_component()
-			if self.lastchangeset and self.lastchangeset.commit:
+			lastchangeset = self.lastchangeset
+			if lastchangeset:
+				lastchangeset.refresh_from_db()
+			if lastchangeset and lastchangeset.commit:
 				try:
 					output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
 					if re.match(".*%s" % self.baseline.uuid, output):
@@ -1439,7 +1442,7 @@ class BaselineInStream(models.Model):
 							shell.getoutput("git -C %s commit -m test -a" % rtcdir, clean=False)
 						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
 						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
-					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, self.lastchangeset.commit.commitid))
+					shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
 					ws_verify.ws_load(load_dir=rtcdir)
 					shell.getoutput("git -C %s add -A" % rtcdir)
 					if git_got_changes(gitdir=rtcdir):
