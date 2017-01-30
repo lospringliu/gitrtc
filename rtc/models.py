@@ -1405,7 +1405,7 @@ class BaselineInStream(models.Model):
 
 	def validate_baseline(self):
 		gitdir = os.path.join(migration_top,self.stream.component.name,'gitdir')
-		rtcdir = os.path.join(migration_top,self.stream.component.name,'rtcdir',re.sub(r' ','',stream.name) + '_verify')
+		rtcdir = os.path.join(migration_top,self.stream.component.name,'rtcdir',re.sub(r' ','',self.stream.name) + '_verify')
 		if not os.path.exists(rtcdir):
 			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
 			ws_verify.component = self.stream.component
