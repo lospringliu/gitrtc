@@ -1564,7 +1564,7 @@ class Workspace(models.Model):
 		else:
 			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
 		if json_r:
-			return list(filter(lambda x: x['name'] == re.sub(r'.*git_migrate_utopia_','',self.name), json_r))
+			return list(filter(lambda x: x['name'] == "git_migrate_%s_%s" % ( self.stream.component.name, re.sub(r' ','',self.stream.name)), json_r))
 		else:
 			return json_r
 
