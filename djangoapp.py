@@ -852,7 +852,7 @@ if __name__ == '__main__':
 					shouter.shout("\t!!! got issue resuming the migration: last migrated changeset does not corresponds to the last commitid")
 					sys.exit(9)
 				else:
-					pass
+					shouter.shout("\t.!. what happend to stream.lastchangeset.commit")
 				items = rtc_show_history(workspace=ws_migrate,component=ws_migrate.component,maxitems=2)
 				if not 'changes' in items.keys() or len(items['changes']) != 2:
 					if len(items['changes']) == 1 and items['changes'][0]['uuid'] == last_migrated_changeset.uuid:
@@ -946,7 +946,7 @@ if __name__ == '__main__':
 				shouter.shout("\t... accepting all changeset up to branching point")
 				shouter.shout("\t... trying to continue the existing migration for non-trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
-				shell.execute("git -C %s pull" % gitdir)
+				shell.execute("git -C %s pull" % rtcdir)
 				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
@@ -985,6 +985,7 @@ if __name__ == '__main__':
 		migrate_stream0(post_incremental=options.incremental)
 		if options.streams:
 			for stream in list_streams:
+				stream.refresh_from_db()
 				if stream.parent:
 					if stream.parent.migrated:
 						shouter.shout("\t...... start to migrate the stream %s" % stream.name)
