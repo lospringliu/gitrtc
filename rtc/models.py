@@ -1841,6 +1841,8 @@ class Workspace(models.Model):
 				if compress_changesets2 != compress_changesets:
 					shouter.shout(".!. detected changeset compress, pay attention please")
 					compress_changesets = compress_changesets2.copy()
+					if not os.path.exists(json_compress_changesets):
+						os.makedirs(os.path.dirname(json_compress_changesets))
 					with open(json_compress_changesets,'w') as f:
 						json.dump(compress_changesets,f)
 				changeset.refresh_from_db()
