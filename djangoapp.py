@@ -949,7 +949,7 @@ if __name__ == '__main__':
 				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
-				if streamlastchangeset.commit and commitid == stream.lastchangeset.commit.commitid:
+				if stream.lastchangeset.commit and commitid == stream.lastchangeset.commit.commitid:
 					shouter.shout("\t... already migrated to the end, mark migrated if not yet")
 					if not stream.migrated:
 						stream.migrated = True
