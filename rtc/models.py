@@ -1445,7 +1445,7 @@ class BaselineInStream(models.Model):
 				shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
 				shell.getoutput("git -C %s pull" % ( rtcdir))
 				output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
-				if re.match(".*%s" % self.baseline.uuid, output):
+				if self.baseline.uuid in list(map(lambda x: x.strip(), output.strip().split('\n'))):
 					shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
 				shell.getoutput("git -C %s checkout -b %s %s" % (rtcdir, self.baseline.uuid, lastchangeset.commit.commitid))
 				try:
