@@ -461,8 +461,8 @@ class Baseline(MPTTModel):
 			self.save()
 	def update_lastchangeset(self):
 		ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-		if ws_history.ws_exist(stream=self.stream,component=self.component):
-			ws_history.ws_delete(stream=self.stream,component=self.component)
+		if ws_history.ws_exist():
+			ws_history.ws_delete()
 		ws_history.uuid = ''
 		ws_history.stream = None
 		ws_history.snapshot = None
@@ -477,7 +477,7 @@ class Baseline(MPTTModel):
 		ws_history.save()
 		ws_history.ws_add_component()
 		ws_history.ws_list_changesets()
-		ws_history.ws_delete(stream=self.stream,component=self.component)
+		ws_history.ws_delete()
 
 
 class Snapshot(MPTTModel):
@@ -641,8 +641,8 @@ class Stream(MPTTModel):
 			sys.exit(9)
 		else:
 			ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-			if ws_history.ws_exist(stream=self):
-				ws_history.ws_delete(stream=self)
+			if ws_history.ws_exist():
+				ws_history.ws_delete()
 			ws_history.uuid = ''
 			ws_history.stream = None
 			ws_history.snapshot = None
@@ -1220,8 +1220,8 @@ class Stream(MPTTModel):
 									uuids.reverse()
 							else:
 								ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
-								if ws_history.ws_exist(stream=self):
-									ws_history.ws_delete(stream=self)
+								if ws_history.ws_exist():
+									ws_history.ws_delete()
 								ws_history.uuid = ''
 								ws_history.stream = None
 								ws_history.snapshot = None
@@ -1423,8 +1423,8 @@ class BaselineInStream(models.Model):
 			if not created:
 				ws_verify.delete()
 			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
-			if ws_verify.ws_exist(stream=self.stream):
-				ws_verify.ws_delete(stream=self)
+			if ws_verify.ws_exist():
+				ws_verify.ws_delete()
 			ws_verify.ws_create()
 			ws_verify.component = self.stream.component
 			ws_verify.baseline = self.baseline
@@ -2019,31 +2019,20 @@ class Workspace(models.Model):
 
 	def ws_update(self,stream=None,component=None):
 		if not self.uuid:
-			if self.ws_exist(stream=stream,component=component):
-				self.uuid = self.ws_list(stream=stream,component=component)[0]['uuid']
+			if self.ws_exist():
+				self.uuid = self.ws_list()[0]['uuid']
 				self.save()
 		else:
-			if not self.ws_exist(stream=stream,component=component):
+			if not self.ws_exist():
 				self.uuid = ''
 				self.save()
 			else:
-				if self.uuid != self.ws_list(stream=stream,component=component)[0]['uuid']:
-					self.uuid = self.ws_list(stream=stream,component=component)[0]['uuid']
+				if self.uuid != self.ws_list()[0]['uuid']:
+					self.uuid = self.ws_list()[0]['uuid']
 					self.save()
 
 	def ws_exist(self,component=None,stream=None):
-		if not stream:
-			stream = self.stream
-		if not component:
-			component = self.component
-		if not component:
-			if self.stream:
-				component = self.stream.component
-			elif stream:
-				component = stream
-			else:
-				pass
-		return len(self.ws_list(component=component,stream=stream))
+		return len(self.ws_list())
 
 	def ws_compare(self,to_snapshot=None,from_snapshot=None):
 		if self.stream:
@@ -2151,18 +2140,18 @@ class Workspace(models.Model):
 			return "no uuid to load"
 
 	def ws_delete(self,stream=None,component=None):
-		if self.ws_exist(stream=stream,component=component):
-			self.ws_update(stream=stream,component=component)
+		if self.ws_exist():
+			self.ws_update()
 		if self.uuid:
 			shell.execute("%s delete workspace -r rtc  %s" % (scmcommand,self.uuid))
-			if not self.ws_exist(stream=stream,component=component):
+			if not self.ws_exist():
 				if self.uuid:
 					self.uuid = ''
 					self.save()
 		else:
 			shell.execute("%s delete workspace -r rtc  %s" % (scmcommand,self.name))
 			shouter.shout("\t.!. tried to delete with workspace name, check workspace please")
-		self.ws_update(stream=stream,component=component)
+		self.ws_update()
 
 	def ws_list_flowtarget(self):
 		if self.uuid:
