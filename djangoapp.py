@@ -188,7 +188,7 @@ if __name__ == '__main__':
 		for stream in sorted_streams:
 			stream.refresh_from_db()
 			all_verifed = True
-			bis_list = list(BaselineInStream.objects.filter(stream=self.stream))
+			bis_list = list(BaselineInStream.objects.filter(stream=stream))
 			stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
