@@ -184,113 +184,43 @@ if __name__ == '__main__':
 			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
 			sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
 			sorted_streams.insert(0,stream0)
-	#	try:
-	#		sorted_streams = sorted(list_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
-	#		sorted_streams.insert(0,stream0)
-	#	except Stream.DoesNotExist:
-	#		shouter.shout("\t!!! stream you specified does not exist")
-	#	if options.recordpath:
-	#		shouter.shout("\t ... try to load changesetuuid<->commitid")
-	#		for stream in sorted_streams:
-	#			empty_sn = 1
-	#			file_string = os.path.join(options.recordpath, "git_%s" % stream.name)
-	#			if os.path.exists(file_string):
-	#				shouter.shout("\t ... load records for stream %s" % stream.name)
-	#				with open(file_string,'r') as f:
-	#					lines = f.read().strip()
-	#					for line in lines.split('\n'):
-	#						parts = line.split(':')
-	#						if len(parts) == 2:
-	#							sequence = 1
-	#							changeset = None
-	#							try:
-	#								changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
-	#								while not changeset in list(stream.lastchangeset.get_ancestors()) + [stream.lastchangeset]:
-	#									sequence += 1
-	#									changeset = ChangeSet.objects.get(uuid=parts[0],sequence=sequence)
-	#							except ChangeSet.DoesNotExist:
-	#								shouter.shout("\t !!! got an issue to load records, verify please")
-	#								sys.exit(9)
-	#							commitid = parts[1].strip()
-	#							if not commitid:
-	#								commitid = "empty%03g%s" % (empty_sn, stream.name.lower())
-	#								empty_sn += 1
-	#							gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
-	#							if not changeset.commit:
-	#								changeset.commit = gitcommit
-	#								changeset.save()
-	#							elif changeset.commit.commitid != commitid:
-	#								print(line)
-	#								shouter.shout("\t .!. got multiple commited git record for changeset %s" % gitcommit.commitid)
-	#								input("press any key to continue or break")
-	#							else:
-	#								print(line)
-	#								shouter.shout("\t .!. got duplicated git record for changeset %s" % gitcommit.commitid)
-	#						else:
-	#							shouter.shout("\t.!. got a record abnormal, check please")
-	#							input("hit any key to continue or to break")
-	#			else:
-	#				shouter.shout("\t .!. did not find record for stream %s" % stream.name)
-	#	else:
-	#		shouter.shout("\t ... you did not specify where to load changeset uuid and commit id records, verifying the completeness instead")
-	#		for stream in sorted_streams:
-	#			if not stream.history_updated:
-	#				shouter.shout("\t!!! stream %s is not handled yet, please do it with --infoupdate" % stream.name)
-	#			elif stream.history_partial or stream.history_inconsistent:
-	#				shouter.shout("\t.!. stream %s has some issues with its history processing, please handle them" % stream.name)
-	#			else:
-	#				shouter.shout("\t... check each baseline in stream %s" % stream.name)
-	#				for bis in stream.baselineinstream_set.all():
-	#					if not bis.historys_processed:
-	#						shouter.shout("\t\t!!! %s was not processed, try --infoupdate" % bis.baseline.name)
-	#						sys.exit(9)
-	#					elif not bis.firstchangeset or not bis.lastchangeset:
-	#						if bis.historys.all():
-	#							shouter.shout("\t\t... updating")
-	#							bis.firstchangeset = bis.historys.first()
-	#							bis.lastchangeset = bis.historys.last()
-	#							bis.save()
-	#						else:
-	#							shouter.shout("\t\t.!. %s does not have its changeset historys" % bis.baseline.name)
-	#					else:
-	#						shouter.shout("\t\t... %s fine" % bis.baseline.name)
-	#		#sys.exi(9)
-		if options.withbaselines:
-			pass
+
 		for stream in sorted_streams:
 			stream.refresh_from_db()
 			all_verifed = True
+			bis_list = list(BaselineInStream.objects.filter(stream=self.stream))
+			stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
 				shouter.shout("\t... stream %s has already been verified" % stream.name)
-				continue
-			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
-			if not os.path.exists(rtcdir):
-				ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-				ws_verify.component = stream.component
-				ws_verify.stream = stream
-				ws_verify.save()
-				rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
-			for bis in stream.baselineinstream_set.all():
-				if bis.verified:
-					shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
-					continue
-				if bis.historys.all():
-					shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
-					verified = bis.validate_baseline()
-					if not verified:
-						all_verified = False
-				else:
-					shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
-					all_verifed = False
+			else:
+				rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
+				if not os.path.exists(rtcdir):
+					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
+					ws_verify.component = stream.component
+					ws_verify.stream = stream
+					ws_verify.save()
+					rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
+				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
+					bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
+					for bis in bis_list_filtered:
+						bis.refresh_from_db()
+						if bis.verified:
+							shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
+							continue
+						if bis.historys.all():
+							shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
+							verified = bis.validate_baseline()
+							if not verified:
+								all_verified = False
+						else:
+							shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
+							all_verifed = False
 			#shouter.shout("\t ... verifying 10 random changesets")
 			if all_verifed:
 				stream.verified = True
 				stream.save()
-		if options.withbranchingpoints:
-			for stream in sorted_streams:
-				stream.refresh_from_db()
-				stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
+			if options.withbranchingpoints:
 				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
 					stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 					for ss in stream_list_filtered:
