@@ -263,7 +263,16 @@ def rtc_show_history(workspace=None, component=None, maxitems=1):
 			shouter.shout("\t.!. can not figure out the component to show history for")
 			raise ValueError("Component info not available")
 	command = "%s show history -r rtc -w %s -m %g -j -C %s" % (scmcommand, workspace.uuid, maxitems, component.uuid)
-	return json.loads(shell.getoutput(command,clean=False))
+	try:
+		return json.loads(shell.getoutput(command,clean=False))
+	except subprocess.CalledProcessError as lscmservice:
+		if lscmservice.returncode == 3:
+			shouter.shout("\t.!. got return code 3, sleep some time to get the locks back")
+			rtclogin_restart()
+			time.sleep(5)
+			return json.loads(shell.getoutput(command,clean=False))
+		else:
+			raise ValueError("\t!!!show history returned error code %g" % lscmservice.returncode)
 		
 def sync_project():
 	from rtc.models import Stream, ProjectArea
