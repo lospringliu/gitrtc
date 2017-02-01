@@ -1559,26 +1559,11 @@ class Workspace(models.Model):
 		return self.name
 
 	def ws_list(self,verbose=False,component=None,stream=None):
-		if not stream:
-			stream = self.stream
-
-		if not component:
-			component = self.component
-		if not component:
-			if self.stream:
-				component = self.stream.component
-			elif stream:
-				component = stream.component
-			else:
-				pass
 		if verbose:
 			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -v -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
 		else:
 			json_r = json.loads(shell.getoutput("%s list workspaces -r rtc -n %s -j -m 2000" % (scmcommand, self.name),clean=False))
-		if json_r:
-			if component and stream:
-				return list(filter(lambda x: x['name'] == "git_migrate_%s_%s" % ( component.name, re.sub(r' ','',stream.name)), json_r))
-		return json_r
+		return list(filter(lambda x: x['name'] == self.name, json_r))
 
 	def ws_remove_conflict_merge(self,rtcdir='',changeset=None):
 		if rtcdir and changeset:
