@@ -567,6 +567,7 @@ class Stream(MPTTModel):
 		ws_migrate.ws_update()
 		ws_migrate.ws_list()
 		ws_migrate.ws_prepare_initial()
+		ws_migrate.refresh_from_db()
 		rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=self.component)
 		if git_got_changes(gitdir=rtcdir):
 			return False
