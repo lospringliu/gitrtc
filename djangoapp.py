@@ -765,7 +765,7 @@ if __name__ == '__main__':
 					shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 					sys.exit(9)
 				ws_migrate.ws_suspend()
-				ws_migrate.ws_resume(use_accept=True)
+				ws_migrate.ws_resume(use_accept=True,do_validation=True)
 
 		def migrate_stream(stream,post_incremental=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))

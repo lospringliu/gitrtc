@@ -1764,7 +1764,7 @@ class Workspace(models.Model):
 				command_args += ' ' + changeset.uuid
 			print(shell.getoutput(command + command_args, clean=False))
 
-	def ws_resume(self,use_accept=False):
+	def ws_resume(self,use_accept=False,do_validation=False):
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.stream.name))
 		json_compress_changesets = os.path.join(settings.BASE_DIR,'tmp',self.component.name,"json_compress_changesets")
 		compress_changesets = []
@@ -1840,23 +1840,29 @@ class Workspace(models.Model):
 						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
 						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
 						shouter.shout("\t... verifying branching point for %s in sync %s <=> %s" % (s.name, changeset.uuid, changeset.commit.commitid))
-						validated = s.validate_branchingpoint()
-						if not validated:
-							shouter.shout("\t.!. branching point validation failed")
-							raise ValueError("Validation failed")
+						if do_validation:
+							validated = s.validate_branchingpoint()
+							if not validated:
+								shouter.shout("\t.!. branching point validation failed")
+								raise ValueError("Validation failed")
+							else:
+								shouter.shout("\t... branching point for %s VALIDATED\n" % s.name)
 						else:
-							shouter.shout("\t... branching point for %s VALIDATED\n" % s.name)
+							shouter.shout("\t.!. you can validate with --infoverify --withbranchingpoints")
 				if bis_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
 					for bis in bis_list_filtered:
 						bis.refresh_from_db()
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
-						validated = bis.validate_baseline()
-						if not validated:
-							shouter.shout("\t.!. baseline in stream validation failed")
-							raise ValueError("Validation failed")
+						if do_validation:
+							validated = bis.validate_baseline()
+							if not validated:
+								shouter.shout("\t.!. baseline in stream validation failed")
+								raise ValueError("Validation failed")
+							else:
+								shouter.shout("\t... baseline in stream VALIDATED\n")
 						else:
-							shouter.shout("\t... baseline in stream VALIDATED\n")
+							shouter.shout("\t.!. you can validate with --infoverify --withbranchingpoints")
 				os.chdir(rtcdir)
 				pushnum += 1
 				if pushnum == PUSHLIMIT:
