@@ -189,10 +189,10 @@ if __name__ == '__main__':
 			stream.refresh_from_db()
 			all_verifed = True
 			bis_list = list(BaselineInStream.objects.filter(stream=stream))
-			stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
+			child_stream_list = sorted(list(stream.children.all()), key = lambda x: x.firstchangeset.level)
 			shouter.shout("\t ... verifying baselines for stream %s" % stream.name)
 			if stream.verified:
-				shouter.shout("\t... stream %s has already been verified" % stream.name)
+				shouter.shout("\t... baselines in stream %s has already been verified" % stream.name)
 			else:
 				rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
 				if not os.path.exists(rtcdir):
@@ -201,39 +201,36 @@ if __name__ == '__main__':
 					ws_verify.stream = stream
 					ws_verify.save()
 					rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
-				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
-					bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
-					for bis in bis_list_filtered:
-						bis.refresh_from_db()
-						if bis.verified:
-							shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
-							continue
-						if bis.historys.all():
-							shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
-							verified = bis.validate_baseline()
-							if not verified:
-								all_verified = False
-						else:
-							shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
-							all_verifed = False
+				for bis in bis_list:
+					bis.refresh_from_db()
+					if bis.verified:
+						shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
+						continue
+					if bis.historys.all():
+						shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
+						verified = bis.validate_baseline()
+						if not verified:
+							all_verified = False
+					else:
+						shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
+						all_verifed = False
 			#shouter.shout("\t ... verifying 10 random changesets")
 			if all_verifed:
 				stream.verified = True
 				stream.save()
+
 			if options.withbranchingpoints:
-				for changeset in stream.lastchangeset.get_ancestors(include_self=True):
-					stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
-					for ss in stream_list_filtered:
-						ss.refresh_from_db()
-						if ss.validated:
-							shouter.shout("\t... branching point %s has been already VALIDATED" % ss.name)
+				for ss in child_stream_list:
+					ss.refresh_from_db()
+					if ss.validated:
+						shouter.shout("\t... branching point %s has been already VALIDATED" % ss.name)
+					else:
+						validated = ss.validate_branchingpoint()
+						if not validated:
+							shouter.shout("\t.!. branching point validation failed for stream %s" % ss.name)
+							raise ValueError("Validation failed")
 						else:
-							validated = ss.validate_branchingpoint()
-							if not validated:
-								shouter.shout("\t.!. branching point validation failed for stream %s" % ss.name)
-								raise ValueError("Validation failed")
-							else:
-								shouter.shout("\t... branching point for %s VALIDATED\n" % ss.name)
+							shouter.shout("\t... branching point for %s VALIDATED\n" % ss.name)
 	elif options.infoshow:
 		sync_streams(component_name=component_name,short_cut=True)
 		stream_rebuild_tree()
