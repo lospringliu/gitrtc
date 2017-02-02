@@ -194,26 +194,14 @@ if __name__ == '__main__':
 			if stream.verified:
 				shouter.shout("\t... baselines in stream %s has already been verified" % stream.name)
 			else:
-				rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name) + '_verify')
-				if not os.path.exists(rtcdir):
-					ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (stream.component.name, stream.name))
-					ws_verify.component = stream.component
-					ws_verify.stream = stream
-					ws_verify.save()
-					rtc_initialize(rtcdir,gitdir=gitdir,workspace=ws_verify,component=stream.component,verifying=True)
 				for bis in bis_list:
 					bis.refresh_from_db()
 					if bis.verified:
 						shouter.shout("\t... baseline in stream %s had been verified earlier" % bis.baseline.name)
 						continue
-					if bis.historys.all():
-						shouter.shout("\t... verifying baseline in stream %s" % bis.baseline.name)
-						verified = bis.validate_baseline()
-						if not verified:
-							all_verified = False
-					else:
-						shouter.shout("\t.!. bypassing baseline in stream %s" % bis.baseline.name)
-						all_verifed = False
+					verified = bis.validate_baseline()
+					if not verified:
+						all_verified = False
 			#shouter.shout("\t ... verifying 10 random changesets")
 			if all_verifed:
 				stream.verified = True
