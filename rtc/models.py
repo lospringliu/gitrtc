@@ -430,8 +430,14 @@ class Component(models.Model):
 							baseline.save()
 						else:
 							if baseline.name != sitem['name'] or baseline.comment != sitem['comment'] or baseline.component != self:
-								shouter.shout("!!! found strange baseline for snapshot")
-								raise ValueError("Found Strange baseline, check please")
+								shouter.shout("\t!!!Found Strange baseline, overwrite information here")
+								baseline.name = sitem['name']
+								baseline.bid = int(sitem['id'])
+								baseline.comment = sitem['comment']
+								baseline.contributor = contributor
+								baseline.created = sitem['creationDate']
+								baseline.createtime = string2datetime(sitem['creationDate'])
+								baseline.save()
 					else:
 						shouter.shout(".!. met incomplete baseline for component %s" % self.name)
 						input("...... any key to continue or break")
