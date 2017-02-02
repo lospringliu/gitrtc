@@ -285,7 +285,7 @@ if __name__ == '__main__':
 					print(stream_string)
 					with open(os.path.join(settings.BASE_DIR,'tmp',"history_%s" % stream.name),'w') as f:
 						if stream.lastchangeset:
-							for c in list(stream.lastchangeset.get_ancestors()) + [stream.lastchangeset]:
+							for c in stream.lastchangeset.get_ancestors(include_self=True):
 								f.write("%s\n" % c.uuid)
 				print('-' * 128)
 			if options.withchangesets:
@@ -771,7 +771,7 @@ if __name__ == '__main__':
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
-			changesets = list(stream.lastchangeset.get_ancestors().filter(migrated=False)) + [stream.lastchangeset]
+			changesets = list(stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False))
 			flag_do_migrate = False
 
 			if not post_incremental:
@@ -863,7 +863,7 @@ if __name__ == '__main__':
 							shouter.shout("\t!!! got incorrect resuming (rest situations), inspect it manually please")
 							sys.exit(9)
 				#if not ws_migrate.stream.migrated:
-				if ws_migrate.stream.lastchangeset.get_ancestors().filter(migrated=False).first().parent != last_migrated_changeset:
+				if ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False).first().parent != last_migrated_changeset:
 					shouter.shout("\t!!! got incorrect resuming last changeset parent, inspect it manually please")
 					sys.exit(9)
 				ws_migrate.ws_resume(use_accept=True)
