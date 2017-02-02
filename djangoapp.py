@@ -35,6 +35,7 @@ parser.add_option("--withbranchingpoint",help="print the branching point", actio
 parser.add_option("--migrate",help="migrate base stream", action="store_true")
 parser.add_option("--allstreams",help="migrate all rest streams", action="store_true")
 parser.add_option("--withrelogin",help="migrate a stream with restart the lscm daemons, necessary if yo delete local workspace", action="store_true")
+parser.add_option("--withvalidation",help="migrate a stream with validation of baselines and branching points", action="store_true")
 parser.add_option("--streambase", help="specify the stream name",dest="stream",action="store",type="string")
 parser.add_option("--component", help="specify the component name",action="store",type="string")
 parser.add_option("--recordpath", help="specify the path where records were writen",action="store",type="string")
@@ -752,7 +753,7 @@ if __name__ == '__main__':
 				ws_migrate.ws_suspend()
 				ws_migrate.ws_resume(use_accept=True,do_validation=True)
 
-		def migrate_stream(stream,post_incremental=False):
+		def migrate_stream(stream,post_incremental=False,do_validation=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
@@ -851,29 +852,33 @@ if __name__ == '__main__':
 				if ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False).first().parent != last_migrated_changeset:
 					shouter.shout("\t!!! got incorrect resuming last changeset parent, inspect it manually please")
 					sys.exit(9)
-				ws_migrate.ws_resume(use_accept=True)
+				ws_migrate.ws_resume(use_accept=True,do_validation=do_validation)
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
 
 		migrate_stream0(post_incremental=options.incremental)
+		do_validation = False
+		if options.withvalidation:
+			do_validation = True
 		if options.streams:
 			for stream in list_streams:
 				stream.refresh_from_db()
 				if stream.parent:
 					if stream.parent.migrated:
 						shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-						migrate_stream(stream,post_incremental=options.incremental)
+						migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
 					else:
 						shouter.shout("\t...... start to migrate the parent stream %s first" % stream.parent.name)
-						if stream == stream0:
+						if stream.parent == stream0:
 							shouter.shout("\t!!! migrate the trunk stream first with --migrate only")
 							sys.exit(9)
-						migrate_stream(stream.parent)
+						migrate_stream(stream.parent,do_valiation=do_validation)
 						stream = Stream.objects.get(id=stream.id)
+						stream.refresh_from_db()
 						if stream.parent.migrated:
 							shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-							migrate_stream(stream,post_incremental=options.incremental)
+							migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
 						else:
 							shouter.shout("\t!!! parent stream is not migrated yet")
 							sys.exit(9)
@@ -889,17 +894,18 @@ if __name__ == '__main__':
 					if stream.parent:
 						if stream.parent.migrated:
 							shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-							migrate_stream(stream)
+							migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
 						else:
 							shouter.shout("\t...... start to migrate the parent stream %s first" % stream.parent.name)
-							if stream == stream0:
+							if stream.parent == stream0:
 								shouter.shout("\t!!! migrate the trunk stream first with --migrate only")
 								sys.exit(9)
-							migrate_stream(stream.parent)
+							migrate_stream(stream.parent,do_validation=do_validation)
 							stream = Stream.objects.get(id=stream.id)
+							stream.refresh_from_db()
 							if stream.parent.migrated:
 								shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-								migrate_stream(stream)
+								migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
 							else:
 								shouter.shout("\t!!! parent stream is not migrated yet")
 								sys.exit(9)
