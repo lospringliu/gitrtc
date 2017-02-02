@@ -552,6 +552,11 @@ class Stream(MPTTModel):
 	def __str__(self):
 		return self.uuid + " -> " + self.name
 
+	def validate_baseline(self):
+		all_verifed = True
+		bis_list = list(BaselineInStream.objects.filter(stream=self))
+		pass
+
 	def validate_branchingpoint(self):
 		gitdir = os.path.join(migration_top,self.component.name,'gitdir')
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))
@@ -1793,7 +1798,8 @@ class Workspace(models.Model):
 			else:
 				cs_create_time = datetime.datetime(1980,1,1)
 
-			for changeset in list(self.stream.lastchangeset.get_ancestors().filter(migrated=False)) + [self.stream.lastchangeset]:
+			for changeset in self.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False):
+				shouter.shout("\tnext:\tpushnum = %g ; level = %g" % (pushnum, changeset.level))
 				bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
 				stream_list_filtered = list(filter(lambda x: x.firstchangeset == changeset, stream_list))
 				cs_create_time_old = cs_create_time
@@ -1877,7 +1883,6 @@ class Workspace(models.Model):
 					if True:
 						shouter.shout("\t...offer a chance to break or continue")
 						time.sleep(5)
-				shouter.shout("\tnext:\tpushnum = %g ; level = %g" % (pushnum, changeset.level))
 			shell.execute("git -C %s push" % rtcdir)
 			#shell.execute("git -C %s push --tags" % rtcdir)
 			stream = self.stream
