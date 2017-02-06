@@ -33,6 +33,7 @@ parser.add_option("--withbranchingpoints",help="verify branching points of a str
 parser.add_option("--withfirstbaselineinstream",help="print first baseline in stream to help relationship", action="store_true")
 parser.add_option("--withbranchingpoint",help="print the branching point", action="store_true")
 parser.add_option("--migrate",help="migrate base stream", action="store_true")
+parser.add_option("--tagbaselines",help="sync rtc baselines to git tags", action="store_true")
 parser.add_option("--allstreams",help="migrate all rest streams", action="store_true")
 parser.add_option("--withrelogin",help="migrate a stream with restart the lscm daemons, necessary if yo delete local workspace", action="store_true")
 parser.add_option("--withvalidation",help="migrate a stream with validation of baselines and branching points", action="store_true")
@@ -873,6 +874,24 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
+		def	migrate_tagbaselines():
+			baselines_to_tag = []
+			for s in Stream.objects.filter(migrated=True):
+				for bis in s.baselineinstream_set.filter(verified=True):
+					baseline = bis.baseline
+					if not baseline.tagged:
+						if not baseline.lastchangeset:
+							baseline.lastchangeset = bis.lastchangeset
+							baseline.save()
+						elif baseline.lastchangeset != bis.lastchangeset:
+							shouter.shout("got in-consistant baseline %s, manual verify please" % baseline.name)
+							sys.exit(9)
+						else:
+							pass
+						baselines_to_tag.append(baseline)
+			#for baseline in baselines_to_tag:
+			#	baseline.lastchangeset.level, baseline.name, baseline.comment
+			print.pprint(baselines_to_tag)
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
@@ -935,6 +954,8 @@ if __name__ == '__main__':
 		else:
 			shouter.shout("\t.!. please use --migrate --streams [ stream_id1, stream_id2, ...] to do the migration for non-trunk streams")
 			shouter.shout("\t.!. or use --migrate --allstream to migrate all rest streams, you may need to run it multiple times for complicated branches")
+		if options.tagbaselines:
+			migrate_tagbaselines()
 
 		
 	else:
