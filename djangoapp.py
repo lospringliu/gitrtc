@@ -875,6 +875,15 @@ if __name__ == '__main__':
 						stream.migrated = True
 						stream.save()
 		def	migrate_tagbaselines():
+			gitdir = os.path.join(migration_top,component0.name,'gitdir')
+			rtcdir = os.path.join(RTCDIR,"taggings")
+			if not os.path.exists(rtcdir):
+				shouter.shout("\t... clone git repository %s -> %s" % (gitdir, rtcdir))
+				shell.execute("git clone -b %s %s %s; sync" % (re.sub(r' ','',stream0.name), gitdir, rtcdir))
+				
+			else:
+				shouter.shout("\t... pull git changes")
+				shell.execute("git -C %s pull; sync" % rtcdir)
 			baselines_to_tag = []
 			for s in Stream.objects.filter(migrated=True):
 				for bis in s.baselineinstream_set.filter(verified=True):
@@ -905,7 +914,9 @@ if __name__ == '__main__':
 						baselines_to_tag.append(baseline)
 			for baseline in baselines_to_tag:
 				print(baseline.tagname)
-			pprint.pprint(baselines_to_tag)
+				if baseline.lastchangeset.commit:
+					print(shell.getoutput("git -C %s tag -a %s %s" % (rtcdir, baseline.tagname, baseline.lastchangeset.commit.commitid),clean=False))
+			#pprint.pprint(baselines_to_tag)
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
