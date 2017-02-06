@@ -260,7 +260,10 @@ class ChangeSet(MPTTModel):
 						rtclogin_restart()
 						time.sleep(5)
 						print(shell.getoutput("%s -u y -a n show history -r rtc -w %s -m 5 -C %s" % (scmcommand, workspace.name, workspace.component.name),clean=False))
-						shell.getoutput("%s discard -r rtc -w %s -o %s" % (scmcommand, workspace.name, self.uuid),clean=False)
+						try:
+							shell.getoutput("%s discard -r rtc -w %s -o %s" % (scmcommand, workspace.name, self.uuid),clean=False)
+						except Exception as e:
+							shouter.shout("\t.!. discard issue, perhaps the changeset was not accepted yet")
 						time.sleep(10)
 						workspace.ws_load(load_dir=rtcdir)
 						time.sleep(5)
