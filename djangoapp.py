@@ -772,6 +772,9 @@ if __name__ == '__main__':
 			if not stream.validated:
 				validated = stream.validate_branchingpoint()
 				stream.refresh_from_db()
+			if not stream.validated:
+				shouter.shout("\t!!! can not migration stream %s since it is not validated" % stream.name)
+				sys.exit(9)
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
 			flag_do_migrate = False
 
