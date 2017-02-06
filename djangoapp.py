@@ -915,7 +915,7 @@ if __name__ == '__main__':
 			for baseline in baselines_to_tag:
 				print(baseline.tagname)
 				if baseline.lastchangeset.commit:
-					print(shell.getoutput("git -C %s tag -a %s %s" % (rtcdir, baseline.tagname, baseline.lastchangeset.commit.commitid),clean=False))
+					print(shell.getoutput("git -C %s tag %s %s" % (rtcdir, baseline.tagname, baseline.lastchangeset.commit.commitid),clean=False))
 			#pprint.pprint(baselines_to_tag)
 
 		if not os.path.exists(gitdir):
