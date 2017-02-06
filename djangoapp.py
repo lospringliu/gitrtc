@@ -769,8 +769,10 @@ if __name__ == '__main__':
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
+			if not stream.validated:
+				validated = stream.validate_branchingpoint()
+				stream.refresh_from_db()
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
-			changesets = list(stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False))
 			flag_do_migrate = False
 
 			if not post_incremental:
@@ -783,42 +785,8 @@ if __name__ == '__main__':
 						return ""
 					if created:
 						shouter.shout("\t... starting the brand new migration for non-trunk stream %s" % stream.name)
-						shouter.shout("\t... let us automate the workspace to migrate")
-						if ws_migrate.ws_exist():
-							### delete existing workspace
-							ws_migrate.ws_delete()
-							ws_migrate.uuid = ''
-							ws_migrate.save()
-						#else:
-						#	shouter.shout("\t.!. there found existing workspace, assume you prepared them already")
-						### create empty workspace
-						ws_migrate.ws_create()
-						### set .stream and .component property
-						ws_migrate.stream = stream
-						ws_migrate.component = stream.component
-						ws_migrate.save()
-
-						ws_migrate.ws_update()
-						ws_migrate.ws_list()
-
-						ws_migrate.ws_prepare_initial()
-					#	ws_migrate.stream = stream
-					#	ws_migrate.component = stream.component
-					#	ws_migrate.save()
-					#	ws_migrate.ws_update()
-					#	ws_migrate.ws_list()
-					#	ws_migrate.ws_add_component()
-					#	ws_migrate.ws_list_component()
-					#	ws_migrate.ws_set_flowtarget()
-					#	ws_migrate.ws_list_flowtarget()
-						ws_migrate = Workspace.objects.get(id=ws_migrate.id)
-						#shouter.shout("attention: we acceptted all previous changests here initially, should have better implemntion using baselines")
-						rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=component0)
-						if git_got_changes(gitdir=rtcdir):
-							shouter.shout("\t!!!initial verification for stream %s failed" % stream.name)
-							sys.exit(9)
-						else:
-							shouter.shout("\t...initial verification for stream %s passed" % stream.name)
+						shouter.shout("\t!!! should not come here, stream.validate_branchingpoint() should've done this")
+						sys.exit(9)
 				else:
 					shouter.shout("\t...non-trunk stream %s is migrated already" % stream.name)
 			else:
