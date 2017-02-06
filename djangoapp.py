@@ -179,12 +179,16 @@ if __name__ == '__main__':
 		except Stream.DoesNotExist:
 			shouter.shout("\t!!! stream you specified does not exist")
 	elif options.infoverify:
-		if not options.streams:
-			sorted_streams = [stream0]
-		else:
+		sorted_streams = []
+		if options.allstreams:
+			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors(include_self=True).filter(migrated=True),list(Stream.objects.filter(component=component0).exclude(id=stream0.id))))
+			sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
+		elif options.streams:
 			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors(include_self=True).filter(migrated=True),list_streams))
 			sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
-			sorted_streams.insert(0,stream0)
+		else:
+			pass
+		sorted_streams.insert(0,stream0)
 
 		for stream in sorted_streams:
 			stream.refresh_from_db()
