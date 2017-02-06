@@ -891,7 +891,7 @@ if __name__ == '__main__':
 						baselines_to_tag.append(baseline)
 			#for baseline in baselines_to_tag:
 			#	baseline.lastchangeset.level, baseline.name, baseline.comment
-			print.pprint(baselines_to_tag)
+			pprint.pprint(baselines_to_tag)
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
