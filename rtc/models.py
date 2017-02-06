@@ -252,7 +252,9 @@ class ChangeSet(MPTTModel):
 #						input("enter to continue or ctrl+c to abort")
 #						shell.execute("lscm discard -r rtc %s" % self.uuid)
 #						shell.execute("lscm resolve conflict -r rtc --auto-merge")
+						shouter.shout("\t.!. try to detect and remove merge if any after conflict resolve" % self.uuid)
 						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
+						print("")
 					elif lscmservice.returncode == 3:
 						shouter.shout("\t.!. got return code 3, sleep some time to get the locks back")
 						rtclogin_restart()
@@ -278,7 +280,9 @@ class ChangeSet(MPTTModel):
 #				time.sleep(1)
 				shell.execute("sync")
 				if checkpoint:
+					shouter.shout("\t...baseline point or branching point, try to remove conflict merge if any")
 					workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
+					shouter.shout("")
 					time.sleep(2)
 					workspace.ws_load(load_dir=rtcdir)
 				if self.level % FORCELOAD == FORCELOAD - 1:
@@ -1577,7 +1581,7 @@ class Workspace(models.Model):
 	def ws_remove_conflict_merge(self,rtcdir='',changeset=None):
 		if rtcdir and changeset:
 			os.chdir(rtcdir)
-			output = shell.getoutput("%s show history -r rtc -w %s -C %s -j -m 2" % (scmcommand, self.uuid, self.component.uuid),clean=False)
+			output = shell.getoutput("%s show history -r rtc -w %s -C %s -j -m 1" % (scmcommand, self.uuid, self.component.uuid),clean=False)
 			results = json.loads(output)
 			cs_first = None
 			if 'changes' in results.keys():
@@ -1834,10 +1838,14 @@ class Workspace(models.Model):
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
 				if checkpoint:
-					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
+					shouter.shout("\t.!. baseline point or branching point, try to remove conflict merge if any")
+					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset.parent)
+					shouter.shout("")
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets,checkpoint=checkpoint)
 				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
+					shouter.shout("\t.!. potential conflict merge, try to remove conflict merge if any")
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset)
+					shouter.shout("")
 
 				if compress_changesets2 != compress_changesets:
 					shouter.shout(".!. detected changeset compress, pay attention please")
