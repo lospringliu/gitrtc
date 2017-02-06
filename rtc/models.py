@@ -459,6 +459,7 @@ class Baseline(MPTTModel):
 	parent = TreeForeignKey('self',null=True,blank=True,related_name='children',on_delete=models.SET_NULL)
 	verified = models.BooleanField(default=False)
 	tagged = models.BooleanField(default=False)
+	tagname = models.CharField(max_length=128,default='',blank=True)
 	
 	def __str__(self):
 		return self.name + " (" + self.uuid + ")"
