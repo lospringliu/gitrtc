@@ -747,14 +747,19 @@ if __name__ == '__main__':
 							shouter.shout("\t!!! got incorrect resuming (rest situations), inspect it manually please")
 							sys.exit(9)
 				#if not ws_migrate.stream.migrated:
-				queryset_migrated = ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
-				if queryset_migrated:
-					if queryset_migrated.first().parent != last_migrated_changeset:
+				queryset_not_migrated = ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
+				if queryset_not_migrated:
+					if queryset_not_migrated.first().parent != last_migrated_changeset:
 						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 						sys.exit(9)
 					else:
 						ws_migrate.ws_suspend()
 						ws_migrate.ws_resume(use_accept=True,do_validation=True)
+				else:
+					shouter.shout("\t... stream %s has been migrated already" % stream.name)
+					if not stream.migrated:
+						stream.migrated = True
+						stream.save()
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
@@ -852,10 +857,18 @@ if __name__ == '__main__':
 							shouter.shout("\t!!! got incorrect resuming (rest situations), inspect it manually please")
 							sys.exit(9)
 				#if not ws_migrate.stream.migrated:
-				if ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False).first().parent != last_migrated_changeset:
-					shouter.shout("\t!!! got incorrect resuming last changeset parent, inspect it manually please")
-					sys.exit(9)
-				ws_migrate.ws_resume(use_accept=True,do_validation=do_validation)
+				queryset_not_migrated = ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
+				if queryset_not_migrated:
+					if queryset_not_migrated.first().parent != last_migrated_changeset:
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
+					else:
+						ws_migrate.ws_resume(use_accept=True,do_validation=True)
+				else:
+					shouter.shout("\t... stream %s has been migrated already" % stream.name)
+					if not stream.migrated:
+						stream.migrated = True
+						stream.save()
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
