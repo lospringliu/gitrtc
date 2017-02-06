@@ -914,7 +914,7 @@ if __name__ == '__main__':
 								baseline.tagname = "baseline_at_level_%g" % baseline.lastchangeset.level
 							baseline.save()
 						baselines_to_tag.append(baseline)
-			for baseline in baselines_to_tag:
+			for baseline in list(set(baselines_to_tag)):
 				print(baseline.tagname)
 				if baseline.lastchangeset.commit:
 					print(shell.getoutput("git -C %s tag %s %s" % (rtcdir, baseline.tagname, baseline.lastchangeset.commit.commitid),clean=False))
