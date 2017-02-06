@@ -27,6 +27,7 @@
     - comoponent name does not contain space
     - stream name does not contains colon 
     - both does not contain shell escaped special characters
+    - baseline name and comment does not contain shell sensitive characters other than space and colon
   - this intends to support only rtc v6+ (lscm show history returns a limit of 1000 items, the earlier version only return 100)
     -- if you rtc is older, you need provide the history files for all streams to migrate
   - SCM tools (recommend lscm for performance, tune java heap size to 4G+ if you have large amount of changesets in streams)
