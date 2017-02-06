@@ -888,9 +888,23 @@ if __name__ == '__main__':
 							sys.exit(9)
 						else:
 							pass
+						if not baseline.tagname:
+							if baseline.name:
+								if not Baseline.objects.filter(tagname=re.sub(r' ','',baseline.name)):
+									baseline.tagname = re.sub(r' ','',baseline.name)
+								else:
+									baseline.tagname = "%s_%g" % (re.sub(r' ','',baseline.name), baseline.lastchangeset.level)
+							elif baseline.comment:
+								if not Baseline.objects.filter(tagname=re.sub(r' ','',baseline.comment)):
+									baseline.tagname = re.sub(r' ','',baseline.comment)
+								else:
+									baseline.tagname = "%s_%g" % (re.sub(r' ','',baseline.comment), baseline.lastchangeset.level)
+							else:
+								baseline.tagname = "baseline_at_level_%g" % baseline.lastchangeset.level
+							baseline.save()
 						baselines_to_tag.append(baseline)
-			#for baseline in baselines_to_tag:
-			#	baseline.lastchangeset.level, baseline.name, baseline.comment
+			for baseline in baselines_to_tag:
+				print(baseline.tagname)
 			pprint.pprint(baselines_to_tag)
 
 		if not os.path.exists(gitdir):
