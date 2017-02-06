@@ -1435,6 +1435,12 @@ class BaselineInStream(models.Model):
 		if self.historys.all():
 			shouter.shout("\t... verifying baseline in stream %s" % self.baseline.name)
 			print("%-4g%-4g %-5g %s %s" % (self.baseline.level, self.baseline.bid, self.lastchangeset.level, self.lastchangeset.uuid, self.baseline.uuid))
+			baseline = self.baseline
+			baseline.refresh_from_db()
+			if baseline.verified and baseline.lastchangeset:
+				shouter.shout("\t.!. shortcuted, baseline has been validated by baseline in another stream")
+				self.verified = True
+				self.save()
 			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
 			if not created:
 				ws_verify.delete()
@@ -1479,10 +1485,9 @@ class BaselineInStream(models.Model):
 						shouter.shout("\t... verification for baseline in stream %s passed" % self.baseline.name)
 						self.verified = True
 						self.save()
-						baseline = self.baseline
-						if not baseline.verified:
-							baseline.verified = True
-							baseline.save()
+						baseline.verified = True
+						baseline.lastchangeset = self.lastchangeset
+						baseline.save()
 						ws_verify.ws_unload(load_dir=rtcdir)
 						shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
 						if git_got_changes(gitdir=rtcdir):
