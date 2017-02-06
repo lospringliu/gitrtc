@@ -1441,6 +1441,7 @@ class BaselineInStream(models.Model):
 				shouter.shout("\t.!. shortcuted, baseline has been validated by baseline in another stream")
 				self.verified = True
 				self.save()
+				return True
 			ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (self.stream.component.name, re.sub(r' ','',self.stream.name)))
 			if not created:
 				ws_verify.delete()
