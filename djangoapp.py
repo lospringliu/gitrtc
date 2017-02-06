@@ -182,7 +182,7 @@ if __name__ == '__main__':
 		if not options.streams:
 			sorted_streams = [stream0]
 		else:
-			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors().filter(migrated=True),list_streams))
+			filtered_streams = list(filter(lambda x: x.lastchangeset.get_ancestors(include_self=True).filter(migrated=True),list_streams))
 			sorted_streams = sorted(filtered_streams, key = lambda s: s.level)
 			sorted_streams.insert(0,stream0)
 
@@ -237,7 +237,7 @@ if __name__ == '__main__':
 			sys.exit(9)
 		try:
 			filtered_streams = list(filter(lambda x: x.history_updated,list_streams))
-			sorted_streams = sorted(filtered_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
+			sorted_streams = sorted(filtered_streams, key = lambda s: s.lastchangeset.get_ancestors(include_self=True).count(), reverse = True)
 			#sorted_streams = sorted(streams, key = lambda s: s.historys.count(), reverse = True)
 			sorted_streams.insert(0,stream0)
 			levels = [0]
@@ -259,7 +259,7 @@ if __name__ == '__main__':
 				if stream.firstchangeset and stream.lastchangeset:
 					stream_string += "%-5g(%5g-%-5g)" % (stream.id, stream.firstchangeset.level,stream.lastchangeset.level)
 				elif stream.lastchangeset:
-					stream_string += "%-5g(%5g-%-5g)" % (stream.id, stream.lastchangeset.get_ancestors().first().level,stream.lastchangeset.level)
+					stream_string += "%-5g(%5g-%-5g)" % (stream.id, stream.lastchangeset.get_ancestors(include_self=True).first().level,stream.lastchangeset.level)
 				else:
 					stream_string += "%-18g" % (stream.id)
 				print(stream_string)
@@ -292,7 +292,7 @@ if __name__ == '__main__':
 						for stream in sorted_streams:
 							changeset = None
 							try:
-								changeset = stream.lastchangeset.get_ancestors().get(level=level)
+								changeset = stream.lastchangeset.get_ancestors(include_self=True).get(level=level)
 							except ChangeSet.DoesNotExist:
 								if level == stream.lastchangeset.level:
 									changeset = streamlastchangeset
@@ -326,7 +326,7 @@ if __name__ == '__main__':
 			sys.exit(9)
 		try:
 			filtered_streams = list(filter(lambda x: x.history_updated,list_streams))
-			sorted_streams = sorted(filtered_streams, key = lambda s: s.lastchangeset.get_ancestors().count(), reverse = True)
+			sorted_streams = sorted(filtered_streams, key = lambda s: s.lastchangeset.get_ancestors(include_self=True).count(), reverse = True)
 			#sorted_streams = sorted(streams, key = lambda s: s.historys.count(), reverse = True)
 			sorted_streams.insert(0,stream0)
 			levels = list(set(stream0.firstchangeset.get_descendants().values_list('level',flat=True)))
@@ -606,12 +606,12 @@ if __name__ == '__main__':
 				shouter.shout("\t.!. did not know how to backup your database, please do it manually")
 				input("any key to continue or break")
 			if not options.shortcut_analyze:
-				if stream0.lastchangeset.get_ancestors().filter(compared=False).count() > 1:
+				if stream0.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, try to solve it with --incremental")
 					stream0.update_baselines(post_incremental=True)
 					stream0.update_history(post_incremental=True)
 					stream0.update_baselines_changesets(post_incremental=True)
-				if stream0.lastchangeset.get_ancestors().filter(compared=False).count() > 1:
+				if stream0.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, should you solve it with --infoupdate --incremental")
 					input("continue or break")
 
@@ -648,12 +648,12 @@ if __name__ == '__main__':
 				shouter.shout("\t.!. did not know how to backup your database, please do it manually")
 				input("any key to continue or break")
 			if not options.shortcut_analyze:
-				if stream.lastchangeset.get_ancestors().filter(compared=False).count() > 1:
+				if stream.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, try to solve it with --infoupdate --incremental")
 					stream.update_baselines(post_incremental=True)
 					stream.update_history(post_incremental=True)
 					stream.update_baselines_changesets(post_incremental=True)
-				if stream.lastchangeset.get_ancestors().filter(compared=False).count() > 1:
+				if stream.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, should you solve it with --infoupdate --incremental")
 					input("continue or break")
 #		shouter.shout("determine last changeset of baselines for compoent %s" % component_name)
@@ -715,7 +715,7 @@ if __name__ == '__main__':
 			if flag_do_migrate:
 				shouter.shout("\t... trying to continue the existing migration for trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
-				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
+				changesets_migrated = stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
 				if stream.lastchangeset.commit and commitid == stream.lastchangeset.commit.commitid:
@@ -747,11 +747,14 @@ if __name__ == '__main__':
 							shouter.shout("\t!!! got incorrect resuming (rest situations), inspect it manually please")
 							sys.exit(9)
 				#if not ws_migrate.stream.migrated:
-				if ws_migrate.stream.lastchangeset.get_ancestors().filter(migrated=False).first().parent != last_migrated_changeset:
-					shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
-					sys.exit(9)
-				ws_migrate.ws_suspend()
-				ws_migrate.ws_resume(use_accept=True,do_validation=True)
+				queryset_migrated = ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
+				if queryset_migrated:
+					if queryset_migrated.first().parent != last_migrated_changeset:
+						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
+						sys.exit(9)
+					else:
+						ws_migrate.ws_suspend()
+						ws_migrate.ws_resume(use_accept=True,do_validation=True)
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
@@ -822,7 +825,7 @@ if __name__ == '__main__':
 				shouter.shout("\t... trying to continue the existing migration for non-trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
 				shell.execute("git -C %s pull" % rtcdir)
-				changesets_migrated = stream.lastchangeset.get_ancestors().filter(migrated=True)
+				changesets_migrated = stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
 				if stream.lastchangeset.commit and commitid == stream.lastchangeset.commit.commitid:
