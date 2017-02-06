@@ -899,15 +899,17 @@ if __name__ == '__main__':
 							pass
 						if not baseline.tagname:
 							if baseline.name:
-								if not Baseline.objects.filter(tagname=re.sub(r' ','',baseline.name)):
-									baseline.tagname = re.sub(r' ','',baseline.name)
+								bname = re.sub(r':','_',re.sub(r' ','',baseline.name))
+								if not Baseline.objects.filter(tagname=bname):
+									baseline.tagname = bname
 								else:
-									baseline.tagname = "%s_%g" % (re.sub(r' ','',baseline.name), baseline.lastchangeset.level)
+									baseline.tagname = "%s_%g" % (bname, baseline.lastchangeset.level)
 							elif baseline.comment:
-								if not Baseline.objects.filter(tagname=re.sub(r' ','',baseline.comment)):
-									baseline.tagname = re.sub(r' ','',baseline.comment)
+								bcomment = re.sub(r':','_',re.sub(r' ','',baseline.comment))
+								if not Baseline.objects.filter(tagname=bcomment):
+									baseline.tagname = bcomment
 								else:
-									baseline.tagname = "%s_%g" % (re.sub(r' ','',baseline.comment), baseline.lastchangeset.level)
+									baseline.tagname = "%s_%g" % (bcomment, baseline.lastchangeset.level)
 							else:
 								baseline.tagname = "baseline_at_level_%g" % baseline.lastchangeset.level
 							baseline.save()
