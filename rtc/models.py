@@ -25,10 +25,6 @@ except Exception as e:
 	SQUASH_MAX_TRY = 10
 if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
-try:
-	RTC_DISPLAY_NAME_IN_HISTORY = settings.RTC_DISPLAY_NAME_IN_HISTORY
-except Exception as e:
-	RTC_DISPLAY_NAME_IN_HISTORY = 'RTC'
 
 # Create your models here.
 class Category(models.Model):
@@ -1586,17 +1582,23 @@ class Workspace(models.Model):
 			if 'changes' in results.keys():
 				cs_first = results['changes'][0]
 			if cs_first:
-				if cs_first['comment'] == "Merges" and cs_first['author'] == RTC_DISPLAY_NAME_IN_HISTORY:
-					shouter.shout("\t found merge for conflict resolv in workspace, discard it")
-					try:
-						shell.execute("cd %s ; %s discard -w %s -o %s" % (rtcdir, scmcommand, self.uuid, cs_first['uuid']))
-					except Exception as e:
-						shouter.shout("\t.!. problem discarding changeset %s" % cs_first['comment'])
-						print(e)
-				elif cs_first['uuid'] != changeset.uuid:
-					shouter.shout("\t.!. strange, first changeset's uuid is not the same with the changeset migrating")
+				if cs_first['uuid'] != changeset.uuid:
+					if not ChangeSet.objects.filter(uuid=cs_first['uuid']):
+						shouter.shout("\t found merge for conflict resolv in workspace, discard it")
+						try:
+							shell.execute("cd %s ; %s discard -w %s -o %s" % (rtcdir, scmcommand, self.uuid, cs_first['uuid']))
+						except Exception as e:
+							shouter.shout("\t.!. problem discarding changeset %s" % cs_first['comment'])
+							print(e)
+					else:
+						shouter.shout("\t.!. history compress happened?")
+						try:
+							w_cs = changeset.get_ancestors().filter(uuid=cs_first['uuid'])
+							shouter.shout("\t.!. workspace first changeset @%g while changeset migrating @%g" % (w_cs.level, changeset.level))
+						except Exception as e:
+							shouter.shout("\t.!. strange, first changeset's uuid is not the same with the changeset migrating")
 				else:
-					shouter.shout("\t... history first changeset the same with changeset migrating")
+					shouter.shout("\t... workspace history first changeset and changeset migrating in sync")
 
 	def ws_prepare_initial(self,accept_limit=2000,firstchangeset=None):
 		#shouter.shout("\t.!. place holder, implement better here")
