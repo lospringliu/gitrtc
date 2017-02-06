@@ -892,6 +892,7 @@ if __name__ == '__main__':
 					baseline.tagged = True
 					baseline.save()
 			#pprint.pprint(baselines_to_tag)
+			shell.execute("git -C %s push --tags; sync" % rtcdir)
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
