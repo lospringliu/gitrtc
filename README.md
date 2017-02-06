@@ -8,6 +8,7 @@
   - The tool is good for changeset history collection and stream branching determine
   - The tool is good for the actual migration
   - The tool is good for the validation
+  - The tool tags rtc baselines it collected
 
 ## What does it do?
   - it collect changeset history for all of the streams of a component
@@ -122,6 +123,8 @@
       1. perform an updated migration of stream with id 200 to git
     5. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --withvalidation --allstreams
       1. perform the migration with validatoins of all streams
+    6. ./djangoapp.py --component yarn --streambase yarn_trunk --migrate --tagbaselines
+      1. create git tags corresponding rtc baselines (of those validated)
   5. ./djangoapp.py --component yarn --streambase yarn_trunk --infoverify (this verifies the trunk stream's baselines)
     1. ./djangoapp.py --component yarn --streambase yarn_trunk --infoverify --streams [id1,id2]
       1. this verifies streams specified
