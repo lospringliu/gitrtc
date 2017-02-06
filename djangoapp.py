@@ -839,7 +839,7 @@ if __name__ == '__main__':
 						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 						sys.exit(9)
 					else:
-						ws_migrate.ws_resume(use_accept=True,do_validation=True)
+						ws_migrate.ws_resume(use_accept=True,do_validation=do_validation)
 				else:
 					shouter.shout("\t... stream %s has been migrated already" % stream.name)
 					if not stream.migrated:
