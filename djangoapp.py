@@ -874,13 +874,13 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
-		def	migrate_tagbaselines():
+
+		def migrate_tagbaselines():
 			gitdir = os.path.join(migration_top,component0.name,'gitdir')
 			rtcdir = os.path.join(RTCDIR,"taggings")
 			if not os.path.exists(rtcdir):
-				shouter.shout("\t... clone git repository %s -> %s" % (gitdir, rtcdir))
+				shouter.shout("\t... clone git repository %s to %s" % (gitdir, rtcdir))
 				shell.execute("git clone -b %s %s %s; sync" % (re.sub(r' ','',stream0.name), gitdir, rtcdir))
-				
 			else:
 				shouter.shout("\t... pull git changes")
 				shell.execute("git -C %s pull; sync" % rtcdir)
@@ -893,7 +893,7 @@ if __name__ == '__main__':
 							baseline.lastchangeset = bis.lastchangeset
 							baseline.save()
 						elif baseline.lastchangeset != bis.lastchangeset:
-							shouter.shout("got in-consistant baseline %s, manual verify please" % baseline.name)
+							shouter.shout("got in-consistent baseline %s, manual verify please" % baseline.name)
 							sys.exit(9)
 						else:
 							pass
@@ -920,6 +920,10 @@ if __name__ == '__main__':
 
 		if not os.path.exists(gitdir):
 			git_initialize(gitdir)
+
+		if options.tagbaselines:
+			migrate_tagbaselines()
+			sys.exit(0)
 
 		migrate_stream0(post_incremental=options.incremental)
 		do_validation = False
@@ -979,9 +983,6 @@ if __name__ == '__main__':
 		else:
 			shouter.shout("\t.!. please use --migrate --streams [ stream_id1, stream_id2, ...] to do the migration for non-trunk streams")
 			shouter.shout("\t.!. or use --migrate --allstream to migrate all rest streams, you may need to run it multiple times for complicated branches")
-		if options.tagbaselines:
-			migrate_tagbaselines()
-
 		
 	else:
 #		sys.argv.insert(1,cmd)
