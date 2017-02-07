@@ -766,6 +766,7 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
+				stream.refresh_from_db()
 				stream.post_migrate_actions(rtcdir=rtcdir)
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
@@ -848,6 +849,7 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
+				stream.refresh_from_db()
 				stream.post_migrate_actions(rtcdir=rtcdir)
 
 

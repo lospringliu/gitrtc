@@ -566,7 +566,7 @@ class Stream(MPTTModel):
 		pass
 
 	def post_migrate_actions(self,rtcdir='.'):
-		if not self.pushed and self.migrated and self.verified:
+		if not self.pushed and self.migrated and ( self.verified or len(list(filter(lambda x: x.lastchangeset, list(self.baselineinstream_set.all())))) == len(list(filter(lambda x: x.verified, list(self.baselineinstream_set.all()))))):
 			if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
 				shouter.shout("\t ... backup staging results")
 				if not os.path.exists(os.path.join(settings.BASE_DIR,'bkup')):
