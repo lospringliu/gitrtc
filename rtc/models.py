@@ -254,7 +254,7 @@ class ChangeSet(MPTTModel):
 #						input("enter to continue or ctrl+c to abort")
 #						shell.execute("lscm discard -r rtc %s" % self.uuid)
 #						shell.execute("lscm resolve conflict -r rtc --auto-merge")
-						shouter.shout("\t.!. try to detect and remove merge if any after conflict resolve" % self.uuid)
+						shouter.shout("\t.!. try to detect and remove merge if any after conflict resolve for changeset %s" % self.uuid)
 						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 						print("")
 					elif lscmservice.returncode == 3:
