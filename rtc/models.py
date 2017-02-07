@@ -563,6 +563,33 @@ class Stream(MPTTModel):
 		bis_list = list(BaselineInStream.objects.filter(stream=self))
 		pass
 
+	def post_migrate_actions(self,rtcdir='.'):
+		if not self.pushed and self.migrated and self.verified:
+			if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
+				shouter.shout("\t ... backup staging results")
+				if not os.path.exists(os.path.join(settings.BASEDIR,'bkup')):
+					os.mkdirs(os.path.join(settings.BASEDIR,'bkup'))
+				bk_folder = os.path.join(settings.BASEDIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % component0.name,'',self.name))
+				if not os.path.exists(bk_folder):
+					os.mkdirs(bk_folder)
+				if db['ENGINE'] == 'django.db.backends.sqlite3':
+					shell.execute("sync; sleep 1; md5sum %s > %s ; bzip2 -c %s > %s ; exit 0 " % (db['NAME'],os.path.join(bk_folder,'md5sum'), db['NAME'], os.path.join(bk_folder,"b_" + os.path.basename(db['NAME']) + ".bz2")))
+				elif db['ENGINE'] == 'django.db.backends.mysql':
+					if db['PASSWORD']:
+						shell.execute("mysqldump -h%s -u%s -p\"%s\" -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['PASSWORD'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
+						shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
+					else:
+						shell.execute("mysqldump -h%s -u%s -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
+						shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
+				else:
+					shouter.shout("\t.!. did not know how to backup your database, please do it manually")
+			if settings.GIT_REMOTE_REPO:
+				shouter.shout("\t ... uploading migrated and verified stream %s to remote git repo %s" % (self.name, settings.GIT_REMOTE_REPO))
+				shell.execute("git -C %s remote add github %s" % (rtcdir, settings.GIT_REMOTE_REPO))
+				shell.execute("git -C %s push github %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',self.name), re.sub(r' ','',self.name)))
+				self.pushed = True
+				self.save()
+
 	def validate_branchingpoint(self):
 		gitdir = os.path.join(migration_top,self.component.name,'gitdir')
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))

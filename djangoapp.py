@@ -742,7 +742,7 @@ if __name__ == '__main__':
 						sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
-						if items['changes'][0]['comment'] != "Merges":
+						if ChangeSet.objects.filter(uuid=items['changes'][0]['uuid']):
 							shouter.shout("\t!!! got incorrect resuming (first history not last migrated), inspect it manually please")
 							sys.exit(9)
 						elif items['changes'][1]['uuid'] == last_migrated_changeset.uuid:
@@ -766,31 +766,7 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
-				if not stream.pushed and stream.migrated and stream.verified:
-					if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
-						shouter.shout("\t ... backup staging results")
-						if not os.path.exists(os.path.join(settings.BASEDIR,'bkup')):
-							os.mkdirs(os.path.join(settings.BASEDIR,'bkup'))
-						bk_folder = os.path.join(settings.BASEDIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % component0.name,'',stream.name))
-						if not os.path.exists(bk_folder):
-							os.mkdirs(bk_folder)
-						if db['ENGINE'] == 'django.db.backends.sqlite3':
-							shell.execute("sync; sleep 1; md5sum %s > %s ; bzip2 -c %s > %s ; exit 0 " % (db['NAME'],os.path.join(bk_folder,'md5sum'), db['NAME'], os.path.join(bk_folder,"b_" + os.path.basename(db['NAME']) + ".bz2")))
-						elif db['ENGINE'] == 'django.db.backends.mysql':
-							if db['PASSWORD']:
-								shell.execute("mysqldump -h%s -u%s -p\"%s\" -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['PASSWORD'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
-								shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
-							else:
-								shell.execute("mysqldump -h%s -u%s -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
-								shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
-						else:
-							shouter.shout("\t.!. did not know how to backup your database, please do it manually")
-					if settings.GIT_REMOTE_REPO:
-						shouter.shout("\t ... uploading migrated and verified stream %s to remote git repo %s" % (stream.name, settings.GIT_REMOTE_REPO))
-						shell.execute("git -C %s remote add github %s" % (rtcdir, settings.GIT_REMOTE_REPO))
-						shell.execute("git -C %s push github %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',stream.name), re.sub(r' ','',stream.name)))
-						stream.pushed = True
-						stream.save()
+				stream.post_migrate_actions(rtcdir=rtcdir)
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
@@ -849,7 +825,7 @@ if __name__ == '__main__':
 					sys.exit(9)
 				else:
 					if items['changes'][0]['uuid'] != last_migrated_changeset.uuid:
-						if items['changes'][0]['comment'] != "Merges":
+						if ChangeSet.objects.filter(uuid=items['changes'][0]['uuid']):
 							shouter.shout("\t!!! got incorrect resuming (first history not last migrated), inspect it manually please")
 							sys.exit(9)
 						elif items['changes'][1]['uuid'] == last_migrated_changeset.uuid:
@@ -872,32 +848,8 @@ if __name__ == '__main__':
 					if not stream.migrated:
 						stream.migrated = True
 						stream.save()
+				stream.post_migrate_actions(rtcdir=rtcdir)
 
-				if not stream.pushed and stream.migrated and stream.verified:
-					if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
-						shouter.shout("\t ... backup staging results")
-						if not os.path.exists(os.path.join(settings.BASEDIR,'bkup')):
-							os.mkdirs(os.path.join(settings.BASEDIR,'bkup'))
-						bk_folder = os.path.join(settings.BASEDIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % component0.name,'',stream.name))
-						if not os.path.exists(bk_folder):
-							os.mkdirs(bk_folder)
-						if db['ENGINE'] == 'django.db.backends.sqlite3':
-							shell.execute("sync; sleep 1; md5sum %s > %s ; bzip2 -c %s > %s ; exit 0 " % (db['NAME'],os.path.join(bk_folder,'md5sum'), db['NAME'], os.path.join(bk_folder,"b_" + os.path.basename(db['NAME']) + ".bz2")))
-						elif db['ENGINE'] == 'django.db.backends.mysql':
-							if db['PASSWORD']:
-								shell.execute("mysqldump -h%s -u%s -p\"%s\" -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['PASSWORD'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
-								shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
-							else:
-								shell.execute("mysqldump -h%s -u%s -c %s > %s; exit 0" % (db['HOST'], db['USER'], db['NAME'], os.path.join(bk_folder,'sql.dump.' + db['NAME'])))
-								shell.execute("bzip2 -c %s > %s; exit 0" % (os.path.join(bk_folder,'sql.dump.' + db['NAME']), os.path.join(bk_folder,'sql.dump.' + db['NAME'] + '.bz2')))
-						else:
-							shouter.shout("\t.!. did not know how to backup your database, please do it manually")
-					if settings.GIT_REMOTE_REPO:
-						shouter.shout("\t ... uploading migrated and verified stream %s to remote git repo %s" % (stream.name, settings.GIT_REMOTE_REPO))
-						shell.execute("git -C %s remote add github %s" % (rtcdir, settings.GIT_REMOTE_REPO))
-						shell.execute("git -C %s push github %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',stream.name), re.sub(r' ','',stream.name)))
-						stream.pushed = True
-						stream.save()
 
 		def migrate_tagbaselines():
 			gitdir = os.path.join(migration_top,component0.name,'gitdir')
