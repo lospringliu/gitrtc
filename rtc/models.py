@@ -1499,6 +1499,7 @@ class BaselineInStream(models.Model):
 							shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
 						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
 						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
+						ws_verify.ws_delete()
 						return True
 				except Exception as e:
 					ws_verify.ws_unload(load_dir=rtcdir)
