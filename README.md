@@ -17,19 +17,19 @@
     - for complicated branches, you need perform further with options --branchfurther --streamparent parent_stream_name
   - it migrate the streams and forcely verify the trunk stream of its branching points and baselines, non-trunk streams optional
   - it collect and generate important baselines and tag them in the git 
-  - it creates certain workspaces for each stream migrated
-    - git_migrate_ComponentName (for changeset history collection, can be safely deleted, this is component level)
+  - it creates workspace git_migrate_ComponentName (for changeset history collection, can be safely deleted, component level)
+  - it creates certain workspaces for each stream migrating
     - git_verify_StreamName     (verify baselines for the stream, can be deleted safely)
     - git_migrate_ComponentName_StreamName (for the migration, should keep it for incremental updates)
 
 ## Requirements
   - tool assumes:
     - comoponent name does not contain space
-    - stream name does not contains colon 
+    - component name and stream name does not contains colon 
     - both does not contain shell escaped special characters
     - baseline name and comment does not contain shell sensitive characters other than space and colon
   - this intends to support only rtc v6+ (lscm show history returns a limit of 1000 items, the earlier version only return 100)
-    -- if you rtc is older, you need provide the history files for all streams to migrate
+    -- if your rtc is older, you need provide the history files for all streams to migrate
   - SCM tools (recommend lscm for performance, tune java heap size to 4G+ if you have large amount of changesets in streams)
   - python3 + Django + django-mptt + docutils
   - mysql + mysqlclient (optional, if your component has 10K+ changesets for performance consideration, I did 50K+ with sqlite3 though)

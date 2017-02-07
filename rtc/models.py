@@ -567,6 +567,9 @@ class Stream(MPTTModel):
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))
 		workspace_stream = 'git_migrate_%s_%s' % (self.component.name, re.sub(r' ','', self.name))
 		ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
+		if not self.firstchangeset:
+			shouter.shout("\t!!! Can not validate, no .firstchangeset found")
+			return False
 		if ws_migrate.ws_exist(stream=self):
 			shouter.shout("\t!!! Can not validate, workspace exists already, please inspect")
 			return False
@@ -584,6 +587,7 @@ class Stream(MPTTModel):
 		ws_migrate.ws_prepare_initial()
 		ws_migrate.refresh_from_db()
 		rtc_initialize(rtcdir, gitdir=gitdir, workspace=ws_migrate, load=True, component=self.component)
+		ws_migrate.refresh_from_db()
 		if git_got_changes(gitdir=rtcdir):
 			return False
 		else:
@@ -1493,6 +1497,8 @@ class BaselineInStream(models.Model):
 						shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
 						if git_got_changes(gitdir=rtcdir):
 							shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
+						shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
+						shell.getoutput("git -C %s branch -D %s" % ( rtcdir, self.baseline.uuid))
 						return True
 				except Exception as e:
 					ws_verify.ws_unload(load_dir=rtcdir)
