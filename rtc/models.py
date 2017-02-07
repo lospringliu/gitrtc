@@ -567,9 +567,9 @@ class Stream(MPTTModel):
 		if not self.pushed and self.migrated and self.verified:
 			if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
 				shouter.shout("\t ... backup staging results")
-				if not os.path.exists(os.path.join(settings.BASEDIR,'bkup')):
-					os.mkdirs(os.path.join(settings.BASEDIR,'bkup'))
-				bk_folder = os.path.join(settings.BASEDIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % component0.name,'',self.name))
+				if not os.path.exists(os.path.join(settings.BASE_DIR,'bkup')):
+					os.mkdirs(os.path.join(settings.BASE_DIR,'bkup'))
+				bk_folder = os.path.join(settings.BASE_DIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % component0.name,'',self.name))
 				if not os.path.exists(bk_folder):
 					os.mkdirs(bk_folder)
 				if db['ENGINE'] == 'django.db.backends.sqlite3':
