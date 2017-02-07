@@ -59,7 +59,7 @@ def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
 		author = changeset.author
 		if not author:
 			author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
-		shell.execute('%s' % author.git_config()) 
+		shell.execute('%s' % author.git_config())
 		command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(changeset.createtime.isoformat()), rtcdir, shell.quote(changeset.comment_with_workitem()), shell.quote(changeset.createtime.isoformat()))
 		if os.path.exists(rtcdir):
 			os.chdir(rtcdir)
@@ -91,7 +91,7 @@ def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
 
 def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,is_master=False,verifying=False):
 	randint = random.randint(100,999)
-	from rtc.models import GitCommit, ChangeSet
+	from rtc.models import GitCommit, ChangeSet, Author
 	if not os.path.exists(rtcdir):
 		shell.execute("mkdir -p %s ; rm -fr %s" % (rtcdir,rtcdir))
 		shouter.shout("clone from git repo @%s to %s" % (gitdir, rtcdir))
@@ -115,9 +115,15 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 			author = item['author']
 			timestamp = string2datetime(item["modified"])
 			if not author in settings.COMPONENT_CREATORS.keys():
-				shouter.shout("Please update your local_settings to provide who (%s) created the components" % author)
-				sys.exit(9)
-			shell.execute('git config --replace-all user.name "%s" ; git config --replace-all user.email "%s"' % (author, settings.COMPONENT_CREATORS[author]))
+				try:
+					author_instance = Author.objects.get(name=author)
+					shell.execute('%s' % author_instance.git_config())
+				except Exception as e:
+					shouter.shout("\t.!.you did update your local_settings to provide who (%s) created the components" % author)
+					shouter.shout("\t.!.use email address unknown@email.com instead")
+					shell.execute('git config --replace-all user.name "%s" ; git config --replace-all user.email "%s"' % (author, 'unknown@email.com'))
+			else:
+				shell.execute('git config --replace-all user.name "%s" ; git config --replace-all user.email "%s"' % (author, settings.COMPONENT_CREATORS[author]))
 			shell.execute("env GIT_COMMITTER_DATE=%s git -C %s commit -m \"%s\" --date %s" % (shell.quote(timestamp.isoformat()), rtcdir,item['comment'],shell.quote(timestamp.isoformat())))
 			shell.execute("git -C %s push origin master:refs/heads/%s" % (rtcdir,re.sub(r' ', '', workspace.stream.name)))
 			commitid = git_last_commitid(rtcdir=rtcdir)

@@ -553,6 +553,7 @@ class Stream(MPTTModel):
 	migrated = models.BooleanField(default=False)
 	verified = models.BooleanField(default=False)
 	validated = models.BooleanField(default=False)
+	pushed = models.BooleanField(default=False)
 
 	def __str__(self):
 		return self.uuid + " -> " + self.name

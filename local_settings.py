@@ -24,6 +24,9 @@ EMAIL_USE_SSL = False
 EMAIL_SSL_CERTFILE = None
 EMAIL_SSL_KEYFILE = None
 
+## remote git repository to push migrated and verified streams (optional, everything is in local)
+GIT_REMOTE_REPO = ''
+
 ## command used for rtc querys
 SCMCOMMAND = 'lscm'
 
