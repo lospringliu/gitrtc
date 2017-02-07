@@ -26,6 +26,8 @@ except Exception as e:
 if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
 
+db = settings.DATABASES['default']
+
 # Create your models here.
 class Category(models.Model):
 	name = models.CharField(max_length=16,unique=True)
