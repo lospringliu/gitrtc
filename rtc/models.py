@@ -568,10 +568,10 @@ class Stream(MPTTModel):
 			if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
 				shouter.shout("\t ... backup staging results")
 				if not os.path.exists(os.path.join(settings.BASE_DIR,'bkup')):
-					os.mkdirs(os.path.join(settings.BASE_DIR,'bkup'))
+					os.makedirs(os.path.join(settings.BASE_DIR,'bkup'))
 				bk_folder = os.path.join(settings.BASE_DIR,'bkup',"bk-finish-%s" % re.sub(r'^%s_| ' % self.component.name,'',self.name))
 				if not os.path.exists(bk_folder):
-					os.mkdirs(bk_folder)
+					os.makedirs(bk_folder)
 				if db['ENGINE'] == 'django.db.backends.sqlite3':
 					shell.execute("sync; sleep 1; md5sum %s > %s ; bzip2 -c %s > %s ; exit 0 " % (db['NAME'],os.path.join(bk_folder,'md5sum'), db['NAME'], os.path.join(bk_folder,"b_" + os.path.basename(db['NAME']) + ".bz2")))
 				elif db['ENGINE'] == 'django.db.backends.mysql':
