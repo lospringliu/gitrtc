@@ -565,7 +565,9 @@ class Stream(MPTTModel):
 		bis_list = list(BaselineInStream.objects.filter(stream=self))
 		pass
 
-	def post_migrate_actions(self,rtcdir='.'):
+	def post_migrate_actions(self,rtcdir=''):
+		if not rtcdir:
+			rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.name))
 		if not self.pushed and self.migrated and ( self.verified or len(list(filter(lambda x: x.lastchangeset, list(self.baselineinstream_set.all())))) == len(list(filter(lambda x: x.verified, list(self.baselineinstream_set.all()))))):
 			if os.path.exists(os.path.join(settings.BASE_DIR,'update')):
 				shouter.shout("\t ... backup staging results")
