@@ -589,6 +589,7 @@ class Stream(MPTTModel):
 					shouter.shout("\t.!. did not know how to backup your database, please do it manually")
 			if settings.GIT_REMOTE_REPO:
 				shouter.shout("\t ... uploading migrated and verified stream %s to remote git repo %s" % (self.name, settings.GIT_REMOTE_REPO))
+				output0 = shell.getoutput("git -C %s pull" % rtcdir, clean=False)
 				output = shell.getoutput("git -C %s remote -v" % rtcdir, clean=False)
 				if not re.match(r'github.*%s' % settings.GIT_REMOTE_REPO, output):
 					shell.execute("git -C %s remote add github %s" % (rtcdir, settings.GIT_REMOTE_REPO))
