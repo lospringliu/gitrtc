@@ -724,6 +724,7 @@ if __name__ == '__main__':
 			if flag_do_migrate:
 				shouter.shout("\t... trying to continue the existing migration for trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
+				shell.execute("git -C %s pull" % rtcdir)
 				changesets_migrated = stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=True)
 				last_migrated_changeset = changesets_migrated.last()
 				commitid = git_last_commitid(rtcdir=rtcdir)
