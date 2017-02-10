@@ -979,8 +979,7 @@ if __name__ == '__main__':
 				for stream in sorted_streams:
 					shouter.shout("\t... handling %s" % stream.name)
 					if stream.migrated:
-						shouter.shout("\t...... stream %s has been migrated already" % stream.name)
-					else:
+						shouter.shout("\t...... stream %s has been migrated, doing incremental now" % stream.name)
 						if stream.parent:
 							if stream.parent.migrated:
 								shouter.shout("\t...... start to migrate the stream %s" % stream.name)
@@ -1002,6 +1001,9 @@ if __name__ == '__main__':
 						else:
 							shouter.shout("\t!!! strange, stream should have an parent stream that it branched from")
 							sys.exit(9)
+					else:
+						shouter.shout("\t!!! stream not migrated yet, can not do incremental")
+						sys.exit(9)
 			else:
 				shouter.shout("\t.!. please use --migrate --streams [ stream_id1, stream_id2, ...] to do the migration for non-trunk streams")
 				shouter.shout("\t.!. or use --migrate --allstream to migrate all rest streams, you may need to run it multiple times for complicated branches")
