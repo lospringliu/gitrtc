@@ -572,12 +572,11 @@ class Stream(MPTTModel):
 			outputa = shell.getoutput("git -C %s push" % rtcdir, clean=False)
 			shouter.shout("\t... incremetal update, push new commits if any")
 			if settings.GIT_REMOTE_REPO:
-				output0 = shell.getoutput("git -C %s pull" % rtcdir, clean=False)
 				output = shell.getoutput("git -C %s remote -v" % rtcdir, clean=False)
 				if not re.match(r'github.*%s' % settings.GIT_REMOTE_REPO, output):
 					shell.execute("git -C %s remote add github %s" % (rtcdir, settings.GIT_REMOTE_REPO))
 				if self.pushed:
-					shell.execute("git -C %s push github %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',self.name), re.sub(r' ','',self.name)))
+					shell.execute("git -C %s push github" % rtcdir)
 		if not self.pushed and self.migrated and ( self.verified or len(list(filter(lambda x: x.lastchangeset, list(self.baselineinstream_set.all())))) == len(list(filter(lambda x: x.verified, list(self.baselineinstream_set.all()))))):
 			if not manual and os.path.exists(os.path.join(settings.BASE_DIR,'update')):
 				shouter.shout("\t ... backup staging results")
