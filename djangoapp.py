@@ -689,6 +689,7 @@ if __name__ == '__main__':
 			rtclogin_restart()
 		def migrate_stream0(post_incremental=False):
 			stream = Stream.objects.get(id=stream0.id)
+			stream.refresh_from_db()
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
 			ws_migrate,created = Workspace.objects.get_or_create(name=workspace_stream)
@@ -714,9 +715,12 @@ if __name__ == '__main__':
 						rtc_initialize(rtcdir, gitdir=gitdir,workspace=ws_migrate,component=component0,load=True,is_master=True)
 				else:
 					shouter.shout("\t...stream %s has been migrated to git branch %s" % (stream.name,stream.name))
-			else:
+			elif stream.migrated:
 				shouter.shout("\t... starting to pickup the changesets that recently commited")
 				flag_do_migrate = True
+			else:
+				shouter.shout("\t... base stream not migrated yet, terminating")
+				sys.exit(9)
 			if flag_do_migrate:
 				shouter.shout("\t... trying to continue the existing migration for trunk stream %s" % stream.name)
 				os.chdir(rtcdir)
@@ -767,9 +771,10 @@ if __name__ == '__main__':
 						stream.migrated = True
 						stream.save()
 				stream.refresh_from_db()
-				stream.post_migrate_actions(rtcdir=rtcdir)
+				stream.post_migrate_actions(rtcdir=rtcdir,post_incremental=post_incremental)
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
+			stream.refresh_from_db()
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
 			if not stream.validated:
@@ -795,9 +800,12 @@ if __name__ == '__main__':
 						sys.exit(9)
 				else:
 					shouter.shout("\t...non-trunk stream %s is migrated already" % stream.name)
-			else:
+			elif stream.migrated:
 				shouter.shout("\t... starting to pickup the changesets that recently commited")
 				flag_do_migrate = True
+			else:
+				shouter.shout("\t... stream not migrated yet, bypass incremental"}
+				return
 			if flag_do_migrate:
 				if not ws_migrate.stream:
 					ws_migrate.stream = stream
@@ -850,7 +858,7 @@ if __name__ == '__main__':
 						stream.migrated = True
 						stream.save()
 				stream.refresh_from_db()
-				stream.post_migrate_actions(rtcdir=rtcdir)
+				stream.post_migrate_actions(rtcdir=rtcdir,post_incremental=post_incremental)
 
 
 		def migrate_tagbaselines():
