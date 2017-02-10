@@ -805,7 +805,7 @@ if __name__ == '__main__':
 				shouter.shout("\t... starting to pickup the changesets that recently commited")
 				flag_do_migrate = True
 			else:
-				shouter.shout("\t... stream not migrated yet, bypass incremental"}
+				shouter.shout("\t... stream not migrated yet, bypass incremental")
 				return
 			if flag_do_migrate:
 				if not ws_migrate.stream:
