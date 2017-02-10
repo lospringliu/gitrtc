@@ -946,9 +946,36 @@ if __name__ == '__main__':
 					shouter.shout("\t!!! strange, stream should have an parent stream that it branched from")
 					sys.exit(9)
 		elif options.allstreams:
-			list_streams = list(filter(lambda x: x.migrated and x.lastchangeset and x.firstchangeset and x.lastchangeset.get_ancestors(include_self=True).filter(level__gt=x.firstchangeset.level).filter(migrated=False), Stream.objects.all()))
-			sorted_streams = sorted(list_streams, key = lambda x: x.level)
+			for stream in Stream.objects.filter(component=component0).exclude(id=stream0.id):
+				shouter.shout("\t... handling %s" % stream.name)
+				if stream.migrated:
+					shouter.shout("\t...... stream %s has been migrated already" % stream.name)
+				else:
+					if stream.parent:
+						if stream.parent.migrated:
+							shouter.shout("\t...... start to migrate the stream %s" % stream.name)
+							migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
+						else:
+							shouter.shout("\t...... start to migrate the parent stream %s first" % stream.parent.name)
+							if stream.parent == stream0:
+								shouter.shout("\t!!! migrate the trunk stream first with --migrate only")
+								sys.exit(9)
+							migrate_stream(stream.parent,do_validation=do_validation)
+							stream = Stream.objects.get(id=stream.id)
+							stream.refresh_from_db()
+							if stream.parent.migrated:
+								shouter.shout("\t...... start to migrate the stream %s" % stream.name)
+								migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
+							else:
+								shouter.shout("\t!!! parent stream is not migrated yet")
+								sys.exit(9)
+					else:
+						shouter.shout("\t!!! strange, stream should have an parent stream that it branched from")
+						sys.exit(9)
+		else:
 			if options.incremental:
+				list_streams = list(filter(lambda x: x.migrated and x.lastchangeset and x.firstchangeset and x.lastchangeset.get_ancestors(include_self=True).filter(level__gt=x.firstchangeset.level).filter(migrated=False), Stream.objects.all()))
+				sorted_streams = sorted(list_streams, key = lambda x: x.level)
 				for stream in sorted_streams:
 					shouter.shout("\t... handling %s" % stream.name)
 					if stream.migrated:
@@ -976,35 +1003,8 @@ if __name__ == '__main__':
 							shouter.shout("\t!!! strange, stream should have an parent stream that it branched from")
 							sys.exit(9)
 			else:
-				for stream in Stream.objects.filter(component=component0).exclude(id=stream0.id):
-					shouter.shout("\t... handling %s" % stream.name)
-					if stream.migrated:
-						shouter.shout("\t...... stream %s has been migrated already" % stream.name)
-					else:
-						if stream.parent:
-							if stream.parent.migrated:
-								shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-								migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
-							else:
-								shouter.shout("\t...... start to migrate the parent stream %s first" % stream.parent.name)
-								if stream.parent == stream0:
-									shouter.shout("\t!!! migrate the trunk stream first with --migrate only")
-									sys.exit(9)
-								migrate_stream(stream.parent,do_validation=do_validation)
-								stream = Stream.objects.get(id=stream.id)
-								stream.refresh_from_db()
-								if stream.parent.migrated:
-									shouter.shout("\t...... start to migrate the stream %s" % stream.name)
-									migrate_stream(stream,post_incremental=options.incremental,do_validation=do_validation)
-								else:
-									shouter.shout("\t!!! parent stream is not migrated yet")
-									sys.exit(9)
-						else:
-							shouter.shout("\t!!! strange, stream should have an parent stream that it branched from")
-							sys.exit(9)
-		else:
-			shouter.shout("\t.!. please use --migrate --streams [ stream_id1, stream_id2, ...] to do the migration for non-trunk streams")
-			shouter.shout("\t.!. or use --migrate --allstream to migrate all rest streams, you may need to run it multiple times for complicated branches")
+				shouter.shout("\t.!. please use --migrate --streams [ stream_id1, stream_id2, ...] to do the migration for non-trunk streams")
+				shouter.shout("\t.!. or use --migrate --allstream to migrate all rest streams, you may need to run it multiple times for complicated branches")
 		
 	else:
 #		sys.argv.insert(1,cmd)
