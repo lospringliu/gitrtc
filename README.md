@@ -52,7 +52,7 @@
 ###  2. install python3
 ### 3. install python3 modules
 ```shell
-# pip3 install Django django-mptt docutils
+# pip3 install "Django<2" django-mptt docutils
 # pip3 install mysqlclient (optional, only if select to use mysql database)
 ```
 ###  4. fork, clone and configure the tool
