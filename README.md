@@ -42,88 +42,67 @@
   - Docker (easy) https://hub.docker.com/r/lospringliu/gitrtc/
   
 ## Steps
-  1. install scmtools and login with proper account as the alias rtc
-
-    * lscm logout -r rtc
-    * lscm login -r https://rtc/url -u your_account -P your_password -n rtc -c (if you password is TOO SPECIAL, change it simpler)
-    * lscm list connections  (you should see the line with something including repo/url and your_account)
-    * lscm help  (see help information)
-
-  2. install python3
-  3. install python3 modules
-
-    * pip3 install Django django-mptt docutils
-    * pip3 install mysqlclient (optional, only if select to use mysql database)
-
-  4. fork, clone and configure the tool
-
-    * edit local_settings.py, you can specify your rtc information to automate login and relogin (rtc login / relogin works in shell environment, you might need change your password to make it work, confirm with cmd line test in step 1 above)
-    * edit local_settings.py, you can configure your mail function
-    * edit local_settings.py, COMPONENT_CREATORS provide information for the component creator info (by default I only figure out user name of the creator, but do not know the email, this variable provides this info, if it is not found, I will use unknown@email.com instead)
-    * edit local_settings.py to decide using sqlite or mysql for database backend.
-
-  5. run the tool:
-
-    * ./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --migrate | --infoverify] [other options]
-
-      * --infoinit (run only once, you should keep using fake component like 'init' and fake streambase like 'init_trunk')
-
-        * retrieve all of your project areas
-        * retrieve their related streams
-        * retrieve components for each stream
-        * usually you only need to do this once, result will be saved as rtc/fixtures/infoinit.json and will be loaded when you process other components
-        * you only need to update this when you add/remove streams or modified components in streams
-
-      * --infoshow [--streams[id1,id2,]] [--writehistory]
-
-        * list streams with their ids that you can specify in options like --streams
-        * --streams [id1,id2,]
-
-          * show informations to a subset of streams
-
-        * --writehistory
-
-          * write changeset history of streams 
-
-      * --infoupdate
-
-        * list all of the baselines for the component
-        * for each stream containing the component, do the following with streambase the first one to process
-
-          * list and create tree of changeset for the stream (if show history return 1000 changeses(lscm limit), create History/history_ComponentName_StreamName file; we can not use compare here since there is squence differences)
-          * list baselines with the corresponding changesets associated
-          * determine branching point against streambase (you may need to do further compare for branches with common branching point on trunk, with --branchfurther --streamparent ParentStreamName)
-
-        * you can pickup new delivered changesets with --incremental
-        * you can do a lightweight analysis to determine branching information with --shortcut_analyze
-
-      * --inforeport [--withbaselines] [--withchangesets] [--streams [id1,id2,]] [--levelrange]
-
-        * report rtc information and component specific numbers
-
-          * --withchangesets
-          show changeset information on branching points and ending points
-          * --withbaselines
-          show baseline information, help
-          * --streams [id1,id2,...]
-          limit the streams to show in the report if you have too many or you only interest in some of them
-          * --levelrange [0,1000] --levelinterval 10
-          used when --withchangesets
-
-      * --migrate [--allstreams] [--streams [id1,id2]] [--withvalidation]
-
-        * migrate only the trunk with --migrate only
-        * you can migrate any streams using --streams [stream_id, stream_id2]
-        * you can try to migrate all streams with --allstreams
-        * you can use --incremental to pickup recently delivered changesets (collected already by --infoupdate --incremental)
-        * you can use --withvalidation to do baseline and branching point validations while migrating
-
-      * --infoverify [--withbranchingpoints ] [--streams [id1,id2] | --allstreams]
-
-        * verify baseline in stream of the trunk by default
-        * specify --allstreams to validate all of the streams migrated
-        * with --streams [id1,id2] to validate specified streams
-        * with --withbranchingpoints to also validate the branching points if there is and not valided yet
+### 1. install scmtools and login with proper account as the alias rtc
+```shell
+# lscm logout -r rtc
+# lscm login -r https://rtc/url -u your_account -P your_password -n rtc -c (if you password is TOO SPECIAL, change it simpler)
+# lscm list connections  (you should see the line with something including repo/url and your_account)
+# lscm help  (see help information)
+```
+###  2. install python3
+### 3. install python3 modules
+```shell
+# pip3 install Django django-mptt docutils
+# pip3 install mysqlclient (optional, only if select to use mysql database)
+```
+###  4. fork, clone and configure the tool
+* edit local_settings.py, you can specify your rtc information to automate login and relogin (rtc login / relogin works in shell environment, you might need change your password to make it work, confirm with cmd line test in step 1 above)
+* edit local_settings.py, you can configure your mail function
+* edit local_settings.py, COMPONENT_CREATORS provide information for the component creator info (by default I only figure out user name of the creator, but do not know the email, this variable provides this info, if it is not found, I will use unknown@email.com instead)
+* edit local_settings.py to decide using sqlite or mysql for database backend.
+### 5. run the tool:
+#### `./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --migrate | --infoverify] [other options]`
+- `--infoinit` (run only once, you should keep using fake component like 'init' and fake streambase like 'init_trunk')
+  * retrieve all of your project areas
+  * retrieve their related streams
+  * retrieve components for each stream
+  * usually you only need to do this once, result will be saved as rtc/fixtures/infoinit.json and will be loaded when you process other components
+  * you only need to update this when you add/remove streams or modified components in streams
+- `--infoshow [--streams[id1,id2,]] [--writehistory]`
+  * list streams with their ids that you can specify in options like --streams
+  * --streams [id1,id2,]
+    * show informations to a subset of streams
+  * --writehistory
+    * write changeset history of streams 
+- `--infoupdate`
+  * list all of the baselines for the component
+  * for each stream containing the component, do the following with streambase the first one to process
+    * list and create tree of changeset for the stream (if show history return 1000 changeses(lscm limit), create History/history_ComponentName_StreamName file; we can not use compare here since there is squence differences)
+    * list baselines with the corresponding changesets associated
+    * determine branching point against streambase (you may need to do further compare for branches with common branching point on trunk, with --branchfurther --streamparent ParentStreamName)
+  * you can pickup new delivered changesets with --incremental
+  * you can do a lightweight analysis to determine branching information with --shortcut_analyze
+- `--inforeport [--withbaselines] [--withchangesets] [--streams [id1,id2,]] [--levelrange]`
+  * report rtc information and component specific numbers
+    * --withchangesets
+    show changeset information on branching points and ending points
+    * --withbaselines
+    show baseline information, help
+    * --streams [id1,id2,...]
+    limit the streams to show in the report if you have too many or you only interest in some of them
+    * --levelrange [0,1000] --levelinterval 10
+    used when --withchangesets
+- `--migrate [--allstreams] [--streams [id1,id2]] [--withvalidation]`
+  * migrate only the trunk with --migrate only
+  * you can migrate any streams using --streams [stream_id, stream_id2]
+  * you can try to migrate all streams with --allstreams
+  * you can use --incremental to pickup recently delivered changesets (collected already by --infoupdate --incremental)
+  * you can use --withvalidation to do baseline and branching point validations while migrating
+- `--infoverify [--withbranchingpoints ] [--streams [id1,id2] | --allstreams]`
+  * verify baseline in stream of the trunk by default
+  * specify --allstreams to validate all of the streams migrated
+  * with --streams [id1,id2] to validate specified streams
+  * with --withbranchingpoints to also validate the branching points if there is and not valided yet
 
 ## Examples
 ### 1 ./djangoapp.py --component init --streambase init_trunk --infoinit  (only once)
