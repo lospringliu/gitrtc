@@ -5,6 +5,6 @@ import subprocess
 import time
 from django.conf import settings
 
-@login_required
+# @login_required
 def homepage(request):
 	return render(request, "homepage.html", {settings: settings})
