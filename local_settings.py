@@ -13,8 +13,8 @@ levelrange = []
 streams = []
 
 ## email settings
-MAIL_FROM = 'xcliu@ca.ibm.com'
-MAIL_ADMIN = ['xcliu@ca.ibm.com',]
+MAIL_FROM = 'yourid@mail.com'
+MAIL_ADMIN = ['yourid@mail.com',]
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 25
 EMAIL_HOST_USER = ''
