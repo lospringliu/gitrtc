@@ -12,7 +12,7 @@
 
 ## What does it do?
   - it collect changeset history for all of the streams of a component
-    - if a stream has more than 1000 changesets outside of the stream it branches from, you need provide the history file
+    - latest rtc client no longer has 1000 history issue, so use it
   - it compares these history and determine the proper branching points
     - for complicated branches, you need perform further with options --branchfurther --streamparent parent_stream_name
   - it migrate the streams and forcely verify the trunk stream of its branching points and baselines, non-trunk streams optional
@@ -28,16 +28,16 @@
     - component name and stream name does not contains colon 
     - both does not contain shell escaped special characters
     - baseline name and comment does not contain shell sensitive characters other than space and colon
-  - this intends to support only rtc v6+ (lscm show history returns a limit of 1000 items, the earlier version only return 100)
+  - this intends to support only latest rtc client (that lscm show history returns unlimited items, the earlier version only return 100 or 1000)
     -- if your rtc is older, you need provide the history files for all streams to migrate
   - SCM tools (recommend lscm for performance, tune java heap size to 4G+ if you have large amount of changesets in streams)
-  - python3 + Django + django-mptt + docutils
+  - python3 + Django<2 + django-mptt + docutils
   - mysql + mysqlclient (optional, if your component has 10K+ changesets for performance consideration, I did 50K+ with sqlite3 though)
-  - use ubuntu 14.04 / 16.04 x64 when doing the migration, with scmtools and IBM java 1.8 (best use the docker image)
+  - use ubuntu 16.04 x64 when doing the migration, with latest scmtools (or use the docker image)
   
 ## Tested on
   - MacOs 10.12
-  - ubuntu 14.04/16.04 (best)
+  - ubuntu 16.04 (best)
   - RHEL 6
   - Docker (easy) https://hub.docker.com/r/lospringliu/gitrtc/
   
@@ -59,7 +59,7 @@
 * edit local_settings.py, you can specify your rtc information to automate login and relogin (rtc login / relogin works in shell environment, you might need change your password to make it work, confirm with cmd line test in step 1 above)
 * edit local_settings.py, you can configure your mail function
 * edit local_settings.py, COMPONENT_CREATORS provide information for the component creator info (by default I only figure out user name of the creator, but do not know the email, this variable provides this info, if it is not found, I will use unknown@email.com instead)
-* edit local_settings.py to decide using sqlite or mysql for database backend.
+* edit local_settings.py to decide using sqlite or mysql for database backend. (optional)
 ### 5. run the tool:
 #### `./djangoapp.py --component component_name --streambase your_trunk_stream_for_the_component [--infoinit | --infoshow | --infoupdate | --inforeport | --migrate | --infoverify] [other options]`
 - `--infoinit` (run only once, you should keep using fake component like 'init' and fake streambase like 'init_trunk')
@@ -77,7 +77,7 @@
 - `--infoupdate`
   * list all of the baselines for the component
   * for each stream containing the component, do the following with streambase the first one to process
-    * list and create tree of changeset for the stream (if show history return 1000 changeses(lscm limit), create History/history_ComponentName_StreamName file; we can not use compare here since there is squence differences)
+    * list and create tree of changeset for the stream
     * list baselines with the corresponding changesets associated
     * determine branching point against streambase (you may need to do further compare for branches with common branching point on trunk, with --branchfurther --streamparent ParentStreamName)
   * you can pickup new delivered changesets with --incremental
