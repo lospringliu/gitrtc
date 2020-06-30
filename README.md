@@ -17,7 +17,7 @@
     - for complicated branches, you need perform further with options --branchfurther --streamparent parent_stream_name
   - it migrate the streams and forcely verify the trunk stream of its branching points and baselines, non-trunk streams optional
   - it collect and generate important baselines and tag them in the git 
-  - it creates workspace git_migrate_ComponentName (for changeset history collection, can be safely deleted, component level)
+  - it creates workspace git_history_ComponentName (for changeset history collection, can be safely deleted, component level)
   - it creates certain workspaces for each stream migrating
     - git_verify_StreamName     (verify baselines for the stream, can be deleted safely)
     - git_migrate_ComponentName_StreamName (for the migration, should keep it for incremental updates)
