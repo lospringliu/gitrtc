@@ -31,9 +31,14 @@ class BaselineAdmin(admin.ModelAdmin):
 	list_per_page = 100
 	list_filter = ('snapshot',)
 
+class WorkspaceAdmin(admin.ModelAdmin):
+	list_display = ('name', 'component', 'stream')
+	list_per_page = 300
+
 admin.site.register(JsonRecord,JsonRecordAdmin)
 admin.site.register(ChangeSet,ChangeSetAdmin)
 admin.site.register(GitCommit,GitCommitAdmin)
 admin.site.register(Stream,StreamAdmin)
 admin.site.register(Baseline,BaselineAdmin)
 admin.site.register(Snapshot,SnapshotAdmin)
+admin.site.register(Workspace,WorkAdmin)
