@@ -116,12 +116,12 @@ if __name__ == '__main__':
 				shouter.shout("\t!!! schema migration failed, did you create your database and got the permissions?")
 				sys.exit(9)
 		django.setup()
-                from django.contrib.auth.models import User
-                admin, created = User.objects.get_or_create(username="admin", email="admin@email.com")
-                if created:
-                    shouter.shout("\t... created admin user as admin/admin")
-                    admin.set_password("admin")
-                    admin.save()
+				from django.contrib.auth.models import User
+				admin, created = User.objects.get_or_create(username="admin", email="admin@email.com")
+				if created:
+					shouter.shout("\t... created admin user as admin/admin")
+					admin.set_password("admin")
+					admin.save()
 		if not ProjectArea.objects.all():
 			shouter.shout("\t... try to load fixtures")
 			if os.path.exists(os.path.join(settings.BASE_DIR,'rtc','fixtures','infoinit.json')):
