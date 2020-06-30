@@ -738,7 +738,7 @@ class Stream(MPTTModel):
 				with open(compare_file,'r') as f:
 					items = json.load(f)
 			else:
-				items = json.loads(shell.getoutput("%s compare -f i -I cbsw -D 'yyyy-MM-dd HH:mm:ss' -r rtc -c %s workspace %s stream %s -j" % (scmcommand, self.component.uuid, ws_history.uuid, self.uuid), clean=False))
+				items = json.loads(shell.getoutput("%s compare -f i -I cbsw -D 'yyyy-MM-dd HH:mm:ss' -r rtc -c %s -j workspace %s stream %s" % (scmcommand, self.component.uuid, ws_history.uuid, self.uuid), clean=False))
 				if not post_incremental:
 					with open(compare_file,'w') as f:
 						json.dump(items,f)
