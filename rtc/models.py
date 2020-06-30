@@ -418,7 +418,7 @@ class Component(models.Model):
 	def __str__(self):
 		return self.name + " (component:" + self.uuid + ")"
 	def update_baselines(self):
-		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 10000 -j" % (scmcommand, self.uuid), clean=False))
+		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 100000 -j" % (scmcommand, self.uuid), clean=False))
 		for item in items:
 			if type(item) == type({}) and 'baselines' in item.keys():
 				for sitem in item['baselines']:
@@ -508,7 +508,7 @@ class Snapshot(MPTTModel):
 	def __str__(self):
 		return self.name + " (" + self.uuid + ") " + self.comment 
 	def update_baselines(self):
-		items = json.loads(shell.getoutput("%s list baselines -s %s -r rtc -m 10000 -j" % (scmcommand, self.uuid), clean=False))
+		items = json.loads(shell.getoutput("%s list baselines -s %s -r rtc -m 100000 -j" % (scmcommand, self.uuid), clean=False))
 		for item in items:
 			if type(item) == type({}) and 'baselines' in item.keys():
 				component,created = Component.objects.get_or_create(name=item['name'],uuid=item['uuid'])
@@ -812,7 +812,7 @@ class Stream(MPTTModel):
 
 	def update_baselines(self,post_incremental=False):
 		print("\t... update baselines for stream %s" % self.name)
-		items = json.loads(shell.getoutput("%s list baselines -r rtc -w %s -C %s -j -m 10000" % (scmcommand, self.uuid, self.component.uuid), clean=False))
+		items = json.loads(shell.getoutput("%s list baselines -r rtc -w %s -C %s -j -m 100000" % (scmcommand, self.uuid, self.component.uuid), clean=False))
 		for item in items:
 			baselinep = None
 			baselines = []
@@ -1154,7 +1154,7 @@ class Stream(MPTTModel):
 					history_updated = True
 				## update with show history to pick up new changesets that happen after the history files with a smaller number of maximum
 				shouter.shout("\t... trying to pick up new changesets after the history file is produced")
-				command = "%s show history -r rtc -w %s -m 1000 -j -C %s" % (scmcommand, self.uuid, self.component.uuid)
+				command = "%s show history -r rtc -w %s -m 100000 -j -C %s" % (scmcommand, self.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
 				changesetp = None
@@ -1251,7 +1251,7 @@ class Stream(MPTTModel):
 					for new_changeset in new_changesets:
 						pass
 			else:
-				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit 1000 changsets are not sufficient" % self.name)
+				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit 100000 changsets are not sufficient" % self.name)
 				ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
 				ws_history.stream = self
 				ws_history.save()
@@ -1260,7 +1260,7 @@ class Stream(MPTTModel):
 				ws_history.ws_create()
 				ws_history.ws_update()
 				ws_history.ws_list()
-				command = "lscm show history -r rtc -w %s -m 1000 -j -C %s" % (ws_history.uuid, self.component.uuid)
+				command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (ws_history.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
 				with open(uuid_file,'w') as f:
@@ -1269,9 +1269,9 @@ class Stream(MPTTModel):
 					if ChangeSet.objects.all():
 						shouter.shout("\t!!! you have existing changesets already, can not perform intial history update")
 						sys.exit(9)
-					if len(uuids) == 1000:
+					if len(uuids) == 100000:
 						if USE_HISTORY_FILE:
-							shouter.shout("\t!!! show history for your streambase return more than 1000 changesets, you need provide the history file for this")
+							shouter.shout("\t!!! show history for your streambase return more than 100000 changesets, you need provide the history file for this")
 							sys.exit(9)
 						else:
 							shouter.shout("\t.!. trying to use lscm compare command to get the full list for you")
@@ -1444,7 +1444,7 @@ class Stream(MPTTModel):
 					#if len(uuids) < 1000:
 					if short_break:
 						history_partial = False
-					elif len(uuids) < 1000:
+					elif len(uuids) < 100000:
 						history_partial = False
 					else:
 						input("\t !!!did not find hook with other streams, terminate here")
@@ -1998,7 +1998,7 @@ class Workspace(models.Model):
 					else:
 						raise ValueError("Did not find the previous changeset")
 			return total
-		command = "lscm show history -r rtc -w %s -m 1000 -j -C %s" % (self.uuid, self.stream.component.uuid)
+		command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (self.uuid, self.stream.component.uuid)
 		output = shell.getoutput(command, clean=False)
 		items = json.loads(output)
 		if 'changes' in items.keys():
