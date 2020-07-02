@@ -352,7 +352,16 @@ class ChangeSet(MPTTModel):
 		return compress_changesets
 	def check_conflicts(self,compress_changesets=[]):
 		try:
-			output = shell.getoutput("lscm show conflicts -j",clean=False)
+			try:
+				output = shell.getoutput("lscm show conflicts -j",clean=False)
+			except subprocess.CalledProcessError as lscmservice:
+				if lscmservice.returncode == 11:
+					outputasbytestring = lscmservice.stdout
+					output = outputasbytestring.decode('utf8')
+				else:
+					input("\t!!! show conflicts returned non-zero non-11")
+					raise ValueError("\t!!!manually check the accept and conflicts please")
+					return 9999
 			if output:
 				items = json.loads(output)
 				if 'conflicts' in items.keys():
@@ -371,7 +380,7 @@ class ChangeSet(MPTTModel):
 			return 0
 		except subprocess.CalledProcessError as lscmservice:
 			shouter.shout("\t.!. failed to show conflicts for changeset %s,return code %g" % (self.uuid, lscmservice.returncode))
-			if lscmservice.returncode == 7:
+			if lscmservice.returncode == 7 or lscmservice.returncode == 3:
 				shouter.shout("\t.!! conflicts contains UNRESOLVED paths, discard and accept with the next changeset until unresoved gone")
 				shouter.shout("\t... try to discard unresolved changesets")
 				command = "%s discard -r rtc -o " % scmcommand
