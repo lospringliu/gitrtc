@@ -64,7 +64,8 @@ if __name__ == '__main__':
 	except Exception as e:
 		shouter.shout("\t!!! I did not find lscm command, did you install scmtools and have it in your PATH env?")
 		sys.exit(9)
-	if options.infoinit or options.infoshow or options.infoupdate or options.inforeport or options.infoverify or options.migrate:
+	# shen added options.tagbaselines
+	if options.infoinit or options.infoshow or options.infoupdate or options.inforeport or options.infoverify or options.migrate or options.tagbaselines:
 		component_name = options.component
 		if not component_name:
 			shouter.shout("\t!!!We will do component based migrations, it is required to specify the component with option --component=component_string")
@@ -79,7 +80,8 @@ if __name__ == '__main__':
 		if local_settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
 			while local_settings.DATABASES['default']['NAME'] != os.path.join(local_settings.BASE_DIR,"db.%s.sqlite3" % re.sub(r' ','',component_name)):
 				shouter.shout("\t... you are using sqlite3 as database engine, setting db file as db.%s.sqlite3" % re.sub(r' ','',component_name))
-				input("any key to continue or break")
+				# shen commented out one line
+				# shen input("any key to continue or break")
 				print(subprocess.check_output("sed -e \"s/\(^[[:space:]]*\)\'NAME\'.*/\\1\'NAME\': os.path.join(BASE_DIR, \'db.%s.sqlite3\')/\" local_settings.py > /tmp/local_settings.py; cat /tmp/local_settings.py > local_settings.py; cat local_settings.py | grep -v \"^#\" | grep -v \"^$\" ;  exit 0" % (re.sub(r' ','',component_name)),shell=True).decode())
 				imp.reload(local_settings)
 		elif local_settings.DATABASES['default']['ENGINE'] == 'django.db.backends.mysql':
@@ -890,7 +892,7 @@ if __name__ == '__main__':
 							sys.exit(9)
 						else:
 							pass
-						if not baseline.tagname:
+						'''if not baseline.tagname:
 							if baseline.name:
 								bname = re.sub(r':','_',re.sub(r' ','',baseline.name))
 								if not Baseline.objects.filter(tagname=bname):
@@ -906,7 +908,15 @@ if __name__ == '__main__':
 							else:
 								baseline.tagname = "baseline_at_level_%g" % baseline.lastchangeset.level
 							baseline.save()
-						baselines_to_tag.append(baseline)
+						baselines_to_tag.append(baseline) '''
+						# shen hack tagging, tag BLs without Daily_
+						if not baseline.tagname:
+							if baseline.name:
+								bname = re.sub(r':','_',re.sub(r' ','',baseline.name))
+								if (not Baseline.objects.filter(tagname=bname)) and ('Daily_' not in bname):
+									baseline.tagname = bname
+									baseline.save()
+									baselines_to_tag.append(baseline)
 			for baseline in list(set(baselines_to_tag)):
 				print(baseline.tagname)
 				if baseline.lastchangeset.commit:

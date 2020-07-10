@@ -141,6 +141,9 @@ class ChangeSet(MPTTModel):
 		if compress_changesets:
 			shouter.shout("\t.!. changesets compress happens, attention %s" % compress_changesets)
 		os.chdir(rtcdir)
+		if compress_changesets:
+			print("... processing with compressed changesets")
+			pprint.pprint(compress_changesets)
 		if manual:
 			shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
 			out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
@@ -229,9 +232,10 @@ class ChangeSet(MPTTModel):
 					returncode = 0
 				except subprocess.CalledProcessError as lscmservice:
 					notify_admin(subject="attention lscm accept on %s" % NODE_NAME, body=self.uuid + " : " + self.comment_with_workitem())
-					if lscmservice.returncode == 11:
+					#shen added returned 21 case
+					if lscmservice.returncode == 11 or lscmservice.returncode == 21:
 						flagconflict = True
-						shouter.shout("\t.!. got return code 11, got conflicts for resume")
+						shouter.shout("\t.!. got return code %s, got conflicts for resume" % lscmservice.returncode)
 						if on_conflict != 'resolve':
 							self.showstopper = True
 							self.save()
@@ -241,7 +245,9 @@ class ChangeSet(MPTTModel):
 						returncode = self.check_conflicts(compress_changesets=compress_changesets)
 						if returncode == 0:
 							compress_changesets = []
-						elif returncode == 7:
+						#shen changed to else
+						#elif returncode == 7:
+						else:
 							compress_changesets.append(self.uuid)
 							self.compressed = True
 							self.save()
@@ -258,23 +264,63 @@ class ChangeSet(MPTTModel):
 						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 						print("")
 					elif lscmservice.returncode == 3:
-						shouter.shout("\t.!. got return code 3, sleep some time to get the locks back")
-						rtclogin_restart()
+						out1 = lscmservice.stdout
+						out1 = out1.decode('utf8')
+						out2 = lscmservice.stderr
+						print(out1)
+						print(out2)
+						# if (out1 and "Unable to move" in out1) or (out2 and "Unable to move" in out2):
 						time.sleep(5)
-						print(shell.getoutput("%s -u y -a n show history -r rtc -w %s -m 5 -C %s" % (scmcommand, workspace.name, workspace.component.name),clean=False))
-						try:
-							shell.getoutput("%s discard -r rtc -w %s -o %s" % (scmcommand, workspace.name, self.uuid),clean=False)
-						except Exception as e:
-							shouter.shout("\t.!. discard issue, perhaps the changeset was not accepted yet")
-						time.sleep(10)
-						workspace.ws_load(load_dir=rtcdir)
-						time.sleep(5)
-						if git_got_changes():
-							shouter.shout("\t!!! local workspace not clean any more, manually handle please")
-							sys.exit(9)
+						if True: # test
+							cpwd = shell.getoutput("pwd", clean=False)
+							print(cpwd)
+							try:
+								shell.execute("cd /tmp; %s discard -r rtc -w %s -o %s" % (scmcommand, workspace.uuid, self.uuid))
+							except Exception as e:
+								shouter.shout("\t.!. discard issue, perhaps the changeset was not accepted yet")
+								time.sleep(5)
+								shell.getoutput("cd /tmp; %s discard -r rtc -w %s -o %s" % (scmcommand, workspace.name, self.uuid),clean=False)
+							cpwd = shell.getoutput("cd %s" % cpwd, clean=False)
+							time.sleep(5)
+							workspace.ws_load(load_dir=rtcdir)
+							# mimic returning 11
+							flagconflict = True
+							shouter.shout("\t.!. got return code 3 treat as 11")
+							if on_conflict != 'resolve':
+								self.showstopper = True
+								self.save()
+								notify_admin(subject="Got Conflict for Changeset Migration",body=self.uuid + " : " + self.comment_with_workitem())
+								raise ValueError("Manual process please!")
+							out_resume = lscmservice.output
+							# returncode = self.check_conflicts(compress_changesets=compress_changesets)
+							returncode = 7
+							compress_changesets.append(self.uuid)
+							pprint.pprint(compress_changesets)
+							self.compressed = True
+							self.save()
+							time.sleep(2)
+							shouter.shout("\t.!. try to detect and remove merge if any after conflict resolve for changeset %s" % self.uuid)
+							workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
+							print("")
+							# end mimic returning 11
 						else:
-							shouter.shout("\t... local workspace clean after discard, retry resuming")
-							out_resume = shell.getoutput(command,clean=False)
+							shouter.shout("\t.!. got return code 3, sleep some time to get the locks back")
+							rtclogin_restart()
+							time.sleep(5)
+							print(shell.getoutput("%s -u y -a n show history -r rtc -w %s -m 5 -C %s" % (scmcommand, workspace.name, workspace.component.name),clean=False))
+							try:
+								shell.getoutput("%s discard -r rtc -w %s -o %s" % (scmcommand, workspace.name, self.uuid),clean=False)
+							except Exception as e:
+								shouter.shout("\t.!. discard issue, perhaps the changeset was not accepted yet")
+							time.sleep(10)
+							workspace.ws_load(load_dir=rtcdir)
+							time.sleep(5)
+							if git_got_changes():
+								shouter.shout("\t!!! local workspace not clean any more, manually handle please")
+								sys.exit(9)
+							else:
+								shouter.shout("\t... local workspace clean after discard, retry resuming")
+								out_resume = shell.getoutput(command,clean=False)
 					elif lscmservice.returncode == 243:
 						shouter.shout("\t... lscm service issue, restarting")
 						rtclogin_restart()
@@ -351,21 +397,40 @@ class ChangeSet(MPTTModel):
 			shouter.shout("\t.!. changeset: %s has been migrated" % self.uuid)
 		return compress_changesets
 	def check_conflicts(self,compress_changesets=[]):
+		# update considering AGGRESSIVE SQUASH
+		if SQUASH_AGGRESIVE:
+			# discard
+			shouter.shout("\t.!! SQUASH_AGGRESIVE, do not try resolving conflicts at all")
+			shouter.shout("\t... try to discard unresolved changesets")
+			command = "%s discard -r rtc -o " % scmcommand
+			for cs in  compress_changesets:
+				command += cs + " "
+			command += self.uuid
+			print("command to discard compressed changesets")
+			print(command)
+			shell.execute(command)
+			shell.execute("%s status" % scmcommand)
+			shell.execute("git status -s")
+			return 7
 		try:
 			try:
 				output = shell.getoutput("lscm show conflicts -j",clean=False)
 			except subprocess.CalledProcessError as lscmservice:
 				if lscmservice.returncode == 11:
+					shouter.shout("\t.!. show conflicts returned 11")
 					outputasbytestring = lscmservice.stdout
 					output = outputasbytestring.decode('utf8')
 				else:
+					# meet a case "lscm show conflicts" failed with non-0 and non-11
+					# shen added return 0 to just let things going
+					return 0
 					input("\t!!! show conflicts returned non-zero non-11")
 					raise ValueError("\t!!!manually check the accept and conflicts please")
 					return 9999
 			if output:
 				items = json.loads(output)
 				if 'conflicts' in items.keys():
-					for item in items['conflicts']:
+					for item in items['conflicts'][0]:
 						conflict,created = Conflict.objects.get_or_create(uuid=item['uuid'])
 						if created:
 							conflict.pathhint = item['path-hint']
@@ -379,7 +444,7 @@ class ChangeSet(MPTTModel):
 					shouter.shout("\t.!. did not actually find conflict for %s" % self.uuid)
 			return 0
 		except subprocess.CalledProcessError as lscmservice:
-			shouter.shout("\t.!. failed to show conflicts for changeset %s,return code %g" % (self.uuid, lscmservice.returncode))
+			shouter.shout("\t.!. failed to resolve conflicts for changeset %s,return code %g" % (self.uuid, lscmservice.returncode))
 			if lscmservice.returncode == 7 or lscmservice.returncode == 3:
 				shouter.shout("\t.!! conflicts contains UNRESOLVED paths, discard and accept with the next changeset until unresoved gone")
 				shouter.shout("\t... try to discard unresolved changesets")
@@ -415,6 +480,9 @@ class Conflict(models.Model):
 	def __str__(self):
 		return self.uuid + ": " + self.pathhint
 	def resolve(self):
+		# shen added shout to show the progress
+		shouter.shout("\t... lscm resolve conflict --proposed %s" % self.uuid)
+		shouter.shout("\t      path:  %s" % self.pathhint)
 		shell.execute("lscm resolve conflict --proposed %s" % self.uuid)
 		time.sleep(1)
 		
@@ -1269,6 +1337,8 @@ class Stream(MPTTModel):
 				ws_history.ws_create()
 				ws_history.ws_update()
 				ws_history.ws_list()
+				# shen added
+				shouter.shout("\t ... get changeset history for stream %s, will take a while for long history..." % self.name)
 				command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (ws_history.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
@@ -1918,11 +1988,12 @@ class Workspace(models.Model):
 					shouter.shout("")
 
 				if compress_changesets2 != compress_changesets:
-					shouter.shout(".!. detected changeset compress, pay attention please")
+					shouter.shout(".!. detected changeset compress change, pay attention please")
 					compress_changesets = compress_changesets2.copy()
 					if not os.path.exists(os.path.dirname(json_compress_changesets)):
 						os.makedirs(os.path.dirname(json_compress_changesets))
 					with open(json_compress_changesets,'w') as f:
+						print("... persist compressed_changesets")
 						json.dump(compress_changesets,f)
 				changeset.refresh_from_db()
 				if stream_list_filtered:
@@ -2225,6 +2296,45 @@ class Workspace(models.Model):
 				if lscmservice.returncode == 243:
 					rtclogin_restart()
 					return shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir, scmcommand, self.uuid),clean=False)
+				elif lscmservice.returncode == 6:
+					output = ""
+					parts = re.split(r'_', self.name)
+					if len(parts) > 3 and parts[0] == "git":
+						component_name = parts[2]
+					else:
+						component_name = ''
+					print("\t.!. got returncode 6, FORCE loading workspace due to collision")
+					if component_name:
+						sleep_try = 10
+						giveup_try = True
+						while sleep_try < 60:
+							try:
+								print("------try--------")
+								print("\t --- wait for %s" % sleep_try)
+								shell.getoutput("cd %s ; rm -fr .jazz* %s; exit 0" % (load_dir, component_name), clean=False)
+								shell.execute("cd %s ; ls -al" % load_dir)
+								time.sleep(sleep_try)
+								output = shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir,scmcommand,self.uuid),clean=False)
+								giveup_try = False
+								break
+							except Exception as e:
+								print("------except--------")
+								time.sleep(10)
+								try:
+									output = shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir,scmcommand,self.uuid),clean=False)
+									giveup_try = False
+									break
+								except Exception:
+									sleep_try *= 2
+									continue
+						if giveup_try:
+							raise ValueError("\t !!! load workspace failed")
+						print("------output--------")
+						print(output)
+						return output
+					else: # try to figure out component name
+						raise ValueError("did not get component name as parameter, can improve by figuring out component name")
+					return "got returncode 6, can not load workspace due to collision"
 				else:
 					raise ValueError("!!! Got unexpected load error")
 		else:
