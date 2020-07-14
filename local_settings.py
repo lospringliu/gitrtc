@@ -47,11 +47,16 @@ COMPONENT_CREATORS = {
 	"user name 3": 'user3@mail.com', # who created the component 3
 }
 
+### streams that is not needed or has issues migration, exclude first
+COMPONENT_STREAM_EXCLUDES = {
+	"compnent_name": ["stream_name_1", "stream_name_2"],
+}
+
 ## aggressively squash changesets that created previous than deliver time
 ## if aggresive, it squashes regarding to the changeset creation time only, this will produce more squashes but fast
 ## normally, try to accept / discard cycle and this will reduce squashes.
-CHANGESET_SQUASH_POLICY_AGGRESIVE = False
-CHANGESET_SQUASH_TRY_BEST_LIMIT = 10
+CHANGESET_SQUASH_POLICY_AGGRESIVE = True
+CHANGESET_SQUASH_TRY_BEST_LIMIT = 100
 
 DATABASES = {
     'default': {

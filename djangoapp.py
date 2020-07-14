@@ -696,6 +696,7 @@ if __name__ == '__main__':
 		if options.withrelogin:
 			rtclogin_restart()
 		def migrate_stream0(post_incremental=False):
+			# migrate trunk
 			stream = Stream.objects.get(id=stream0.id)
 			stream.refresh_from_db()
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
@@ -773,6 +774,7 @@ if __name__ == '__main__':
 						sys.exit(9)
 					else:
 						ws_migrate.ws_suspend()
+						# === migrate from RTC to git for a workspace ===
 						ws_migrate.ws_resume(use_accept=True,do_validation=True)
 				else:
 					shouter.shout("\t... stream %s has been migrated already" % stream.name)
@@ -783,6 +785,7 @@ if __name__ == '__main__':
 				stream.post_migrate_actions(rtcdir=rtcdir,post_incremental=post_incremental)
 
 		def migrate_stream(stream,post_incremental=False,do_validation=False):
+			# === migrate other streams ===
 			stream.refresh_from_db()
 			rtcdir = os.path.join(RTCDIR,re.sub(r' ','',stream.name))
 			workspace_stream = 'git_migrate_%s_%s' % (stream.component.name, re.sub(r' ','', stream.name))
@@ -860,6 +863,7 @@ if __name__ == '__main__':
 						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 						sys.exit(9)
 					else:
+						# === migrate from RTC to git for a workspace ===
 						ws_migrate.ws_resume(use_accept=True,do_validation=do_validation)
 				else:
 					shouter.shout("\t... stream %s has been migrated already" % stream.name)

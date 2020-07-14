@@ -8,6 +8,11 @@ MONTH2NUM = {'Aug': 8, 'Jul': 7, 'Apr': 4, 'Jun': 6, 'Oct': 10, 'May': 5, 'Jan':
 migration_top = os.path.abspath(os.path.join(settings.BASE_DIR,"..","migration"))
 NODE_NAME = os.uname().nodename
 
+try:
+	COMPONENT_STREAM_EXCLUDES = local_settings.COMPONENT_STREAM_EXCLUDES
+except Exception as e:
+	COMPONENT_STREAM_EXCLUDES = []
+
 db = settings.DATABASES
 scmcommand = local_settings.SCMCOMMAND
 if not scmcommand:
@@ -297,13 +302,22 @@ def sync_streams(short_cut=False,component_name=''):
 		shouter.shout("\t.!.Assume you have loaded the fixtures or you are repeating inforupdate")
 		shouter.shout("\t...bypassing stream creation and its components updates, simply resetting stream.component instead")
 		try:
+			excluded_stream_names = []
+			if component_name in COMPONENT_STREAM_EXCLUDES.keys():
+				excluded_stream_names = COMPONENT_STREAM_EXCLUDES[component_name]
 			component = Component.objects.get(name=component_name)
 			for stream in Stream.objects.all():
 				if component in stream.components.all():
-					if stream.component != component:
-						shouter.shout("\t...setting componet %s for stream %s" % (component_name, stream.name))
-						stream.component = component
-						stream.save()
+					if stream.name not in excluded_stream_names:
+						if stream.component != component:
+							shouter.shout("\t...setting componet %s for stream %s" % (component_name, stream.name))
+							stream.component = component
+							stream.save()
+					else:
+						if stream.component and stream.component == component:
+							shouter.shout("\t.!.unsetting component %s for stream %s" % (component_name, stream.name))
+							stream.component = None
+							stream.save()
 				else:
 					if stream.component and stream.component == component:
 						shouter.shout("\t.!.unsetting component %s for stream %s" % (component_name, stream.name))
@@ -343,3 +357,12 @@ def sync_streams(short_cut=False,component_name=''):
 				else:
 					shouter.shout("\t!!! unknown stream met")
 					pprint.pprint(item)
+
+
+def save_compress_changesets_to_json(json_path, compress_changesets):
+	# save compress_changesets to a json file
+	if not os.path.exists(os.path.dirname(json_path)):
+		os.makedirs(os.path.dirname(json_path))
+	with open(json_path,'w') as f:
+		print("... persist compressed_changesets")
+		json.dump(compress_changesets,f)

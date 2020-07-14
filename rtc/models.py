@@ -25,6 +25,10 @@ except Exception as e:
 	SQUASH_MAX_TRY = 10
 if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
+try:
+	COMPONENT_STREAM_EXCLUDES = settings.COMPONENT_STREAM_EXCLUDES
+except Exception as e:
+	COMPONENT_STREAM_EXCLUDES = []
 
 db = settings.DATABASES['default']
 
@@ -132,17 +136,16 @@ class ChangeSet(MPTTModel):
 		#	for workitem in self.workitems.all():
 		#		wiinfo += str(workitem.number) + ", "
 		#	wiinfo = re.sub(r', $',': ',wiinfo)
-		return wiinfo + self.comment
+		return (wiinfo + self.comment).encode('utf-8', errors='ignore').decode('utf-8')
 
 	def resume(self,workspace,use_accept=False,manual=False,flagconflict=False,on_conflict='resolve',rtcdir='',compress_changesets=[],timestamp=None,checkpoint=False):
 		if not rtcdir:
 			shouter.shout("\t!!! you did not specify rtcdir")
 			sys.exit(9)
-		if compress_changesets:
-			shouter.shout("\t.!. changesets compress happens, attention %s" % compress_changesets)
 		os.chdir(rtcdir)
+		json_compress_changesets = os.path.join(settings.BASE_DIR,'tmp',workspace.component.name,"json_compress_changesets")
 		if compress_changesets:
-			print("... processing with compressed changesets")
+			shouter.shout("\t.!. changesets compress happens, compressed <%s>" % len(compress_changesets))
 			pprint.pprint(compress_changesets)
 		if manual:
 			shouter.shout("\t...manual resuming %s" % self.comment_with_workitem())
@@ -201,10 +204,13 @@ class ChangeSet(MPTTModel):
 			elif self.category.name != 'changeset':
 				shouter.shout(".!.bypassing non-changeset changeset %s: %s" % (self.uuid,self.comment))
 				answer = input("type ctrl+c to break, else to continue")
-			elif not self.comment or not self.createtime:
-				shouter.shout(".!.got strange changeset: no comment or createtime for %s" % self.uuid)
-				answer = input("type ctrl+c to break, else to continue")
 			else:
+				if not self.comment:
+					self.commonet = 'no comment'
+				if not self.createtime:
+					shouter.shout(".!.got strange changeset: no createtime for %s" % self.uuid)
+					self.createtime = self.parent.createtime
+					answer = input("type ctrl+c to break, else to continue")
 				flagconflict = False
 				shouter.shout("\t...resuming %s" % self.comment_with_workitem())
 				if use_accept:
@@ -229,10 +235,10 @@ class ChangeSet(MPTTModel):
 				try:
 					out_resume = shell.getoutput(command,clean=False)
 					compress_changesets = []
+					save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 					returncode = 0
 				except subprocess.CalledProcessError as lscmservice:
 					notify_admin(subject="attention lscm accept on %s" % NODE_NAME, body=self.uuid + " : " + self.comment_with_workitem())
-					#shen added returned 21 case
 					if lscmservice.returncode == 11 or lscmservice.returncode == 21:
 						flagconflict = True
 						shouter.shout("\t.!. got return code %s, got conflicts for resume" % lscmservice.returncode)
@@ -245,17 +251,16 @@ class ChangeSet(MPTTModel):
 						returncode = self.check_conflicts(compress_changesets=compress_changesets)
 						if returncode == 0:
 							compress_changesets = []
-						#shen changed to else
-						#elif returncode == 7:
 						else:
 							compress_changesets.append(self.uuid)
 							self.compressed = True
 							self.save()
+						save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 #						shouter.shout("\t.!. try manual merge for conflict %s" % self.uuid)
 						time.sleep(2)
 						#workspace.ws_load(load_dir=rtcdir)
 #						shouter.shout("\t... act in 10 seconds if you wish to break")
-						print(shell.getoutput('lscm show status -i "in:cb out:c"; exit 0',clean=False))
+						print(shell.getoutput('lscm show status -i "in:c out:c"; exit 0',clean=False))
 #						time.sleep(2)
 #						input("enter to continue or ctrl+c to abort")
 #						shell.execute("lscm discard -r rtc %s" % self.uuid)
@@ -264,12 +269,9 @@ class ChangeSet(MPTTModel):
 						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 						print("")
 					elif lscmservice.returncode == 3:
-						out1 = lscmservice.stdout
-						out1 = out1.decode('utf8')
-						out2 = lscmservice.stderr
-						print(out1)
-						print(out2)
-						# if (out1 and "Unable to move" in out1) or (out2 and "Unable to move" in out2):
+						# shen get error "Unable to move" in aceept and cannot get conflicts
+						# discard the cs and add it into compress_changesets to try accept it together with next cs
+						# to improve, we should catch "Unable to move" 
 						time.sleep(5)
 						if True: # test
 							cpwd = shell.getoutput("pwd", clean=False)
@@ -292,9 +294,9 @@ class ChangeSet(MPTTModel):
 								notify_admin(subject="Got Conflict for Changeset Migration",body=self.uuid + " : " + self.comment_with_workitem())
 								raise ValueError("Manual process please!")
 							out_resume = lscmservice.output
-							# returncode = self.check_conflicts(compress_changesets=compress_changesets)
 							returncode = 7
 							compress_changesets.append(self.uuid)
+							save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 							pprint.pprint(compress_changesets)
 							self.compressed = True
 							self.save()
@@ -353,14 +355,13 @@ class ChangeSet(MPTTModel):
 					author,created = Author.objects.get_or_create(name='none',mail='none@xx.ibm.com',uuid='uuidforauthornone',userid='none@xx.ibm.com')
 				shell.execute('%s' % author.git_config()) 
 				out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
-				print(out_add)
+				print("Git add output: \n%s" % out_add)
 				command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(self.createtime.isoformat()), rtcdir, shell.quote(self.comment_with_workitem()), shell.quote(self.createtime.isoformat()))
 				try:
 					out_commit = shell.getoutput(command,clean=False) 
 				except subprocess.CalledProcessError:
 					shouter.shout("\t!!! got an issue commit code, here is the info, ctrl + c to break or any other key to continue")
 					pprint.pprint(out_resume)
-					print(out_add)
 					print("--->>> logging this issue to .issues/commits")
 					time.sleep(5)
 					issues_commits = os.path.join(".issues","commits")
@@ -369,7 +370,7 @@ class ChangeSet(MPTTModel):
 					out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
 					out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
 					out_commit = shell.getoutput(command,clean=False) 
-				print(out_commit)
+				print("Git commit output: \n%s" % out_commit)
 				out_log = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir,clean=False)
 				print(out_log)
 				commitid = out_log.split()[0]
@@ -396,6 +397,7 @@ class ChangeSet(MPTTModel):
 		else:
 			shouter.shout("\t.!. changeset: %s has been migrated" % self.uuid)
 		return compress_changesets
+
 	def check_conflicts(self,compress_changesets=[]):
 		# update considering AGGRESSIVE SQUASH
 		if SQUASH_AGGRESIVE:
@@ -409,7 +411,7 @@ class ChangeSet(MPTTModel):
 			print("command to discard compressed changesets")
 			print(command)
 			shell.execute(command)
-			shell.execute("%s status" % scmcommand)
+			#shell.execute("%s status" % scmcommand)
 			shell.execute("git status -s")
 			return 7
 		try:
@@ -480,7 +482,6 @@ class Conflict(models.Model):
 	def __str__(self):
 		return self.uuid + ": " + self.pathhint
 	def resolve(self):
-		# shen added shout to show the progress
 		shouter.shout("\t... lscm resolve conflict --proposed %s" % self.uuid)
 		shouter.shout("\t      path:  %s" % self.pathhint)
 		shell.execute("lscm resolve conflict --proposed %s" % self.uuid)
@@ -932,6 +933,7 @@ class Stream(MPTTModel):
 						elif not post_incremental and baselinep.parent != baseline:
 							shouter.shout("!!! found strange baseline for snapshot %s: parent %s, should it be %s?" % (baselinep.uuid, baselinep.parent.uuid,baseline.uuid))
 							shouter.shout("\t !!! should we continue or break? input y to continue or else to break")
+							shouter.shout("\t !!! is this stream not related to our stream at all? consider update local_settings.COMPONENT_STREAM_EXCLUDES")
 							answer = input("\tyes or no? y/n  ")
 							if answer.strip() != 'y' and answer.strip() != 'Y':
 								raise ValueError("Found Strange baseline, check please")
@@ -1337,7 +1339,6 @@ class Stream(MPTTModel):
 				ws_history.ws_create()
 				ws_history.ws_update()
 				ws_history.ws_list()
-				# shen added
 				shouter.shout("\t ... get changeset history for stream %s, will take a while for long history..." % self.name)
 				command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (ws_history.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
@@ -1945,6 +1946,7 @@ class Workspace(models.Model):
 			else:
 				cs_create_time = datetime.datetime(1980,1,1)
 
+			# === looping all cs in a workspace for migration ===
 			for changeset in self.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False):
 				shouter.shout("\tnext:\tpushnum = %g ; level = %g" % (pushnum, changeset.level))
 				bis_list_filtered = list(filter(lambda x: x.baseline and x.lastchangeset == changeset , bis_list))
@@ -1964,6 +1966,7 @@ class Workspace(models.Model):
 						shouter.shout("\t.!. changeset %g %s is squashable changesets, fast forwarding ..." % (changeset.level, changeset.uuid))
 						if not checkpoint:
 							compress_changesets.append(changeset.uuid)
+							save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 							continue
 					else:
 						shouter.shout("\t.!. changeset %g %s is squashable, but let us try our best to keep the history ..." % (changeset.level, changeset.uuid))
@@ -1974,6 +1977,7 @@ class Workspace(models.Model):
 								shouter.shout("\t.!..!. multiple delivered changesets more than %g, compress it ..." % SQUASH_MAX_TRY)
 								if not checkpoint:
 									compress_changesets.append(changeset.uuid)
+									save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 									continue
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
@@ -1981,6 +1985,7 @@ class Workspace(models.Model):
 					shouter.shout("\t.!. baseline point or branching point, try to remove conflict merge if any")
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset.parent)
 					shouter.shout("")
+				# === migrate an cs: accept cs from RTC then commit to git ===
 				compress_changesets2 = changeset.resume(self,use_accept=use_accept,rtcdir=rtcdir,compress_changesets=compress_changesets,checkpoint=checkpoint)
 				if changeset.createtime > cs_create_time_old and changeset.level > 10 and changeset.parent.createtime < cs_create_time_old:
 					shouter.shout("\t.!. potential conflict merge, try to remove conflict merge if any")
@@ -1990,11 +1995,7 @@ class Workspace(models.Model):
 				if compress_changesets2 != compress_changesets:
 					shouter.shout(".!. detected changeset compress change, pay attention please")
 					compress_changesets = compress_changesets2.copy()
-					if not os.path.exists(os.path.dirname(json_compress_changesets)):
-						os.makedirs(os.path.dirname(json_compress_changesets))
-					with open(json_compress_changesets,'w') as f:
-						print("... persist compressed_changesets")
-						json.dump(compress_changesets,f)
+					save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 				changeset.refresh_from_db()
 				if stream_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
@@ -2017,12 +2018,34 @@ class Workspace(models.Model):
 					shell.execute("git -C %s push" % rtcdir)
 					for bis in bis_list_filtered:
 						bis.refresh_from_db()
+						bis_baseline = bis.baseline
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
 						if do_validation:
 							validated = bis.validate_baseline()
 							if not validated:
-								shouter.shout("\t.!. baseline in stream validation failed")
-								raise ValueError("Validation failed")
+								shouter.shout("\t.!. baseline in stream validation failed, but let us try to sync from the baseline")
+								os.chdir(rtcdir)
+								shouter.shout("\t... reset last git commit")
+								shell.execute("git -C %s reset HEAD^1" % rtcdir)
+								shouter.shout("\t... log this sync issue")
+								issues_baseline_sync = os.path.join(".issues","baseline_sync")
+								with open(issues_baseline_sync,'a') as issue:
+									issue.write("%s@%g\t\t%s\t\tsync back\n" % (changeset.uuid, changeset.level, bis_baseline.uuid))
+								shouter.shout("\t... sync updates from baseline")
+								shell.execute("rm -fr [a-ZA-Z0-9_-]*; cp -a ../conductor_trunk_verify/[a-ZA-Z0-9_-]* .")
+								shouter.shout("\t... git add and commit back")
+								shell.execute("git -C %s add -A" % rtcdir)
+								command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(changeset.createtime.isoformat()), rtcdir, shell.quote(changeset.comment_with_workitem()), shell.quote(changeset.createtime.isoformat()))
+								shell.execute(command)
+								commitid = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir,clean=False).split()[0]
+								gitcommit = changeset.commit
+								gitcommit.commitid = commitid
+								gitcommit.save()
+								bis.verified = True
+								bis.save()
+								bis_baseline.verified = True
+								bis_baseline.lastchangeset = bis.lastchangeset
+								bis_baseline.save()
 							else:
 								shouter.shout("\t... baseline in stream VALIDATED\n")
 						else:
@@ -2298,19 +2321,18 @@ class Workspace(models.Model):
 					return shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir, scmcommand, self.uuid),clean=False)
 				elif lscmservice.returncode == 6:
 					output = ""
-					parts = re.split(r'_', self.name)
-					if len(parts) > 3 and parts[0] == "git":
-						component_name = parts[2]
-					else:
-						component_name = ''
+					if not self.component:
+						raise ValueError("should have .component to get component name")
+					component_name = self.component.name
 					print("\t.!. got returncode 6, FORCE loading workspace due to collision")
+					# lscm load not work w/o restart lscm
+					rtclogin_restart()
+					time.sleep(5)
 					if component_name:
-						sleep_try = 10
+						sleep_try = 5
 						giveup_try = True
-						while sleep_try < 60:
+						while sleep_try < 10:
 							try:
-								print("------try--------")
-								print("\t --- wait for %s" % sleep_try)
 								shell.getoutput("cd %s ; rm -fr .jazz* %s; exit 0" % (load_dir, component_name), clean=False)
 								shell.execute("cd %s ; ls -al" % load_dir)
 								time.sleep(sleep_try)
@@ -2318,7 +2340,6 @@ class Workspace(models.Model):
 								giveup_try = False
 								break
 							except Exception as e:
-								print("------except--------")
 								time.sleep(10)
 								try:
 									output = shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir,scmcommand,self.uuid),clean=False)
@@ -2329,7 +2350,6 @@ class Workspace(models.Model):
 									continue
 						if giveup_try:
 							raise ValueError("\t !!! load workspace failed")
-						print("------output--------")
 						print(output)
 						return output
 					else: # try to figure out component name
