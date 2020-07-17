@@ -136,7 +136,8 @@ class ChangeSet(MPTTModel):
 		#	for workitem in self.workitems.all():
 		#		wiinfo += str(workitem.number) + ", "
 		#	wiinfo = re.sub(r', $',': ',wiinfo)
-		return (wiinfo + self.comment).encode('utf-8', errors='ignore').decode('utf-8')
+		# shen added to resolve encoding error
+		return (wiinfo + self.comment).encode('ascii', errors='ignore').decode('utf-8')
 
 	def resume(self,workspace,use_accept=False,manual=False,flagconflict=False,on_conflict='resolve',rtcdir='',compress_changesets=[],timestamp=None,checkpoint=False):
 		if not rtcdir:
@@ -333,7 +334,8 @@ class ChangeSet(MPTTModel):
 #				time.sleep(1)
 				shell.execute("sync")
 				if checkpoint:
-					shouter.shout("\t...baseline point or branching point, try to remove conflict merge if any")
+					# shen added "in <changeset resume>"
+					shouter.shout("\t...baseline point or branching point, try to remove conflict merge if any in <changeset resume>")
 					workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 					shouter.shout("")
 					time.sleep(2)
@@ -933,7 +935,8 @@ class Stream(MPTTModel):
 						elif not post_incremental and baselinep.parent != baseline:
 							shouter.shout("!!! found strange baseline for snapshot %s: parent %s, should it be %s?" % (baselinep.uuid, baselinep.parent.uuid,baseline.uuid))
 							shouter.shout("\t !!! should we continue or break? input y to continue or else to break")
-							shouter.shout("\t !!! is this stream not related to our stream at all? consider update local_settings.COMPONENT_STREAM_EXCLUDES")
+							# shen added to show the WS name right on the spot, thinking about to update local_settings in code instead stop here
+							shouter.shout("\t !!! is this stream <%s> not related to our stream at all? consider update local_settings.COMPONENT_STREAM_EXCLUDES" % self.name)
 							answer = input("\tyes or no? y/n  ")
 							if answer.strip() != 'y' and answer.strip() != 'Y':
 								raise ValueError("Found Strange baseline, check please")
@@ -1593,7 +1596,7 @@ class BaselineInStream(models.Model):
 			if lastchangeset and lastchangeset.commit:
 				shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
 				if git_got_changes(gitdir=rtcdir):
-					shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
+					shell.getoutput("git -C %s commit -m testbeforeload; exit 0" % rtcdir, clean=False)
 				shell.getoutput("git -C %s checkout %s" % ( rtcdir, re.sub(r' ','',self.stream.name)))
 				shell.getoutput("git -C %s pull" % ( rtcdir))
 				output = shell.getoutput("git -C %s branch" % rtcdir, clean=False)
@@ -1608,7 +1611,7 @@ class BaselineInStream(models.Model):
 						ws_verify.ws_unload(load_dir=rtcdir)
 						shell.getoutput("git -C %s add -A; exit 0" % rtcdir, clean=False)
 						if git_got_changes(gitdir=rtcdir):
-							shell.getoutput("git -C %s commit -m test; exit 0" % rtcdir, clean=False)
+							shell.getoutput("git -C %s commit -m testafterload; exit 0" % rtcdir, clean=False)
 						print(git_got_changes(gitdir=rtcdir, logical=False))
 						return False
 					else:
@@ -1982,7 +1985,8 @@ class Workspace(models.Model):
 						else:
 							shouter.shout("\t.!..!. unique changeset, try to keep the history ...")
 				if checkpoint:
-					shouter.shout("\t.!. baseline point or branching point, try to remove conflict merge if any")
+					#shen added "in <ws_resume>"
+					shouter.shout("\t.!. baseline point or branching point, try to remove conflict merge if any in <ws_resume>")
 					self.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=changeset.parent)
 					shouter.shout("")
 				# === migrate an cs: accept cs from RTC then commit to git ===
@@ -1997,27 +2001,14 @@ class Workspace(models.Model):
 					compress_changesets = compress_changesets2.copy()
 					save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
 				changeset.refresh_from_db()
-				if stream_list_filtered:
-					shell.execute("git -C %s push" % rtcdir)
-					for s in stream_list_filtered:
-						s.refresh_from_db()
-						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
-						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
-						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
-						shouter.shout("\t... verifying branching point for %s in sync %s <=> %s" % (s.name, changeset.uuid, changeset.commit.commitid))
-						if do_validation:
-							validated = s.validate_branchingpoint()
-							if not validated:
-								shouter.shout("\t.!. branching point validation failed")
-								raise ValueError("Validation failed")
-							else:
-								shouter.shout("\t... branching point for %s VALIDATED\n" % s.name)
-						else:
-							shouter.shout("\t.!. you can validate with --infoverify --withbranchingpoints")
 				if bis_list_filtered:
 					shell.execute("git -C %s push" % rtcdir)
 					for bis in bis_list_filtered:
 						bis.refresh_from_db()
+						if len(compress_changesets) > 0:
+							shouter.shout("\t!!! baseline should not have compressed changesets")
+							pprint.pprint(compress_changesets)
+							input("press to continue")
 						bis_baseline = bis.baseline
 						shouter.shout("\t... verifying baseline in stream %s (%s)" % (bis.baseline.name, bis.baseline.comment))
 						if do_validation:
@@ -2032,11 +2023,13 @@ class Workspace(models.Model):
 								with open(issues_baseline_sync,'a') as issue:
 									issue.write("%s@%g\t\t%s\t\tsync back\n" % (changeset.uuid, changeset.level, bis_baseline.uuid))
 								shouter.shout("\t... sync updates from baseline")
-								shell.execute("rm -fr [a-ZA-Z0-9_-]*; cp -a ../conductor_trunk_verify/[a-ZA-Z0-9_-]* .")
+								shell.execute("rsync -au --delete  ../%s_verify/* ." % self.stream.name)
+								shell.execute("git -C %s status" % rtcdir)
 								shouter.shout("\t... git add and commit back")
 								shell.execute("git -C %s add -A" % rtcdir)
 								command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(changeset.createtime.isoformat()), rtcdir, shell.quote(changeset.comment_with_workitem()), shell.quote(changeset.createtime.isoformat()))
 								shell.execute(command)
+								shell.execute("git -C %s push -f" % rtcdir)
 								commitid = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir,clean=False).split()[0]
 								gitcommit = changeset.commit
 								gitcommit.commitid = commitid
@@ -2046,8 +2039,69 @@ class Workspace(models.Model):
 								bis_baseline.verified = True
 								bis_baseline.lastchangeset = bis.lastchangeset
 								bis_baseline.save()
+								shouter.shout("\t... unload and delete verify workspace, delete verify local folder")
+								rtcdir_verify = os.path.join(migration_top,bis.stream.component.name,'rtcdir',re.sub(r' ','',bis.stream.name) + '_verify')
+								ws_verify,created = Workspace.objects.get_or_create(name='git_verify_%s_%s' % (bis.stream.component.name, re.sub(r' ','',bis.stream.name)))
+								ws_verify.ws_delete()
+								# have issue to delete here ws_verify.ws_unload(load_dir=rtcdir_verify)
+								# shell.getoutput("git -C %s checkout %s" % (rtcdir_verify, re.sub(r' ','',bis.stream.name)))
+								# shell.getoutput("git -C %s branch -D %s" % (rtcdir_verify, bis.baseline.uuid))
+								rtclogin_restart()
+								time.sleep(5)
+								shell.getoutput("rm -fr %s" % rtcdir_verify)
 							else:
 								shouter.shout("\t... baseline in stream VALIDATED\n")
+						else:
+							shouter.shout("\t.!. you can validate with --infoverify --withbranchingpoints")
+				os.chdir(rtcdir)
+				#?? what if baseline validation changed the last git commit already??#
+				if stream_list_filtered:
+					shell.execute("git -C %s push" % rtcdir)
+					for s in stream_list_filtered:
+						s.refresh_from_db()
+						rtcdir_branch = os.path.join(migration_top,s.component.name,'rtcdir',re.sub(r' ','',s.name))
+						if len(compress_changesets) > 0:
+							shouter.shout("\t!!! branching point should not have compressed changesets")
+							pprint.pprint(compress_changesets)
+							input("press to continue")
+						print(subprocess.check_output("git -C %s checkout -b %s" % (rtcdir, re.sub(r' ','',s.name)),shell=True).decode())
+						shell.execute("git -C %s checkout %s" % (rtcdir,re.sub(r' ','',self.stream.name)))
+						print(subprocess.check_output("git -C %s push origin :refs/heads/%s; echo test only ;git -C %s push origin %s:refs/heads/%s" % (rtcdir, re.sub(r' ','',s.name), rtcdir, re.sub(r' ','',s.name), re.sub(r' ','',s.name)), shell=True).decode())
+						shouter.shout("\t... verifying branching point for %s in sync %s <=> %s" % (s.name, changeset.uuid, changeset.commit.commitid))
+						if do_validation:
+							validated = s.validate_branchingpoint()
+							if not validated:
+								shouter.shout("\t.!. branching point validation failed")
+								shouter.shout("\t.!. but let us try to sync from the branching point")
+								os.chdir(rtcdir_branch)
+								shouter.shout("\t... reset last git commit")
+								shell.execute("git -C %s reset HEAD^1" % rtcdir_branch)
+								shouter.shout("\t... log this sync issue")
+								issues_branch_sync = os.path.join(".issues","branch_sync")
+								with open(issues_branch_sync,'a') as issue:
+									issue.write("%s@%g\t\t%s\t\tsync back\n" % (changeset.uuid, changeset.level, s.name))
+								shouter.shout("\t... sync updates from branchingpoint")
+								shell.execute("git -C %s status" % rtcdir_branch)
+								shouter.shout("\t... git add and commit back")
+								shell.execute("git -C %s add -A" % rtcdir_branch)
+								command = 'env GIT_COMMITTER_DATE=%s git -C %s commit -m %s --date=%s' % (shell.quote(changeset.createtime.isoformat()), rtcdir_branch, shell.quote(changeset.comment_with_workitem()), shell.quote(changeset.createtime.isoformat()))
+								shell.execute(command)
+								shell.execute("git -C %s push -f origin %s:%s" % (rtcdir_branch,  re.sub(r' ','',s.name), re.sub(r' ','',self.stream.name)))
+								shell.execute("git -C %s push -f" % rtcdir_branch)
+								commitid = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir_branch,clean=False).split()[0]
+								gitcommit = changeset.commit
+								gitcommit.commitid = commitid
+								gitcommit.save()
+								os.chdir(rtcdir)
+								shell.execute("git -C %s fetch" % rtcdir)
+								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',s.name)))
+								shell.execute("git -C %s -D %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
+								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
+								shell.execute("git -C %s -D %s" % (rtcdir, re.sub(r' ','',s.name)))
+								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',s.name)))
+								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
+							else:
+								shouter.shout("\t... branching point for %s VALIDATED\n" % s.name)
 						else:
 							shouter.shout("\t.!. you can validate with --infoverify --withbranchingpoints")
 				os.chdir(rtcdir)
@@ -2316,7 +2370,8 @@ class Workspace(models.Model):
 			try:
 				return shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir,scmcommand,self.uuid),clean=False)
 			except subprocess.CalledProcessError as lscmservice:
-				if lscmservice.returncode == 243:
+				# shen added to catch returned non-zero exit status 3
+				if lscmservice.returncode == 243 or lscmservice.returncode == 3:
 					rtclogin_restart()
 					return shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir, scmcommand, self.uuid),clean=False)
 				elif lscmservice.returncode == 6:

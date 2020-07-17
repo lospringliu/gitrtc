@@ -298,14 +298,20 @@ def sync_project():
 def sync_streams(short_cut=False,component_name=''):
 	from rtc.models import Stream, ProjectArea, Component
 	shouter.shout("\tCollecting Streams and their components")
+	# shen added some comments
+	# short_cut=False only in options.infoinit
 	if short_cut:
 		shouter.shout("\t.!.Assume you have loaded the fixtures or you are repeating inforupdate")
 		shouter.shout("\t...bypassing stream creation and its components updates, simply resetting stream.component instead")
 		try:
+			# shen added some comments
+			# exclude bad or unwanted streams defined in local_settings.py for a given compoment
 			excluded_stream_names = []
 			if component_name in COMPONENT_STREAM_EXCLUDES.keys():
 				excluded_stream_names = COMPONENT_STREAM_EXCLUDES[component_name]
 			component = Component.objects.get(name=component_name)
+			# shen added some comments
+			#looping throght all streams, add the given component with component_name into the streams
 			for stream in Stream.objects.all():
 				if component in stream.components.all():
 					if stream.name not in excluded_stream_names:
@@ -329,6 +335,9 @@ def sync_streams(short_cut=False,component_name=''):
 		except Component.DoesNotExist:
 			raise ValueError("\t!!!The component name you specified was not found, did you run --infoinit?")
 	else:
+		# shen added some comments
+		# in the case of ---infoinit
+		# looping RTC project areas and collecte all streams, initialized stream and compoment DB objects 
 		for projectarea in ProjectArea.objects.all():
 			shouter.shout("\t ... inside project area %s" % projectarea.name)
 			output = shell.getoutput("%s list streams -r rtc --projectarea %s  -m 512 -j" % (scmcommand, projectarea.uuid), clean=False)
@@ -363,6 +372,9 @@ def save_compress_changesets_to_json(json_path, compress_changesets):
 	# save compress_changesets to a json file
 	if not os.path.exists(os.path.dirname(json_path)):
 		os.makedirs(os.path.dirname(json_path))
+	# shen added to show fewer "persist compressed_changesets" messages
+	if os.path.isfile(json_path) and os.path.getsize(json_path) == 2 and not compress_changesets:
+		return
 	with open(json_path,'w') as f:
 		print("... persist compressed_changesets")
 		json.dump(compress_changesets,f)
