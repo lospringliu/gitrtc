@@ -70,7 +70,7 @@ def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
 			os.chdir(rtcdir)
 			issues_conflicts = os.path.join(rtcdir,".issues","conflicts")
 			with open(issues_conflicts,'a') as issue:
-				issue.write("%s@%g\t\t%s\t\tcompress\t%s\n" % (changeset.uuid, changeset.level, workspace.stream.name, changeset.comment))
+				issue.write("%s@%g\t\t%s\t\tcompress\t%s\n" % (changeset.uuid, changeset.level, workspace.stream.name, changeset.comment.encode('ascii', errors='ignore').decode('utf-8')))
 			out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
 			out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
 			out_commit = shell.getoutput(command,clean=False) 

@@ -168,7 +168,7 @@ class ChangeSet(MPTTModel):
 				time.sleep(5)
 				issues_commits = os.path.join(".issues","commits")
 				with open(issues_commits,'a') as issue:
-					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment.encode('ascii', errors='ignore').decode('utf-8')))
 				out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
 				out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
 				out_commit = shell.getoutput(command,clean=False) 
@@ -183,7 +183,7 @@ class ChangeSet(MPTTModel):
 			if flagconflict:
 				issues_conflicts = os.path.join(".issues","conflicts")
 				with open(issues_conflicts,'a') as issue:
-					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+					issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment.encode('ascii', errors='ignore').decode('utf-8')))
 			self.out_resume = "manual handle"
 			self.out_load = "manual handle"
 			gitcommit.out_status = out_status
@@ -269,7 +269,7 @@ class ChangeSet(MPTTModel):
 						shouter.shout("\t.!. try to detect and remove merge if any after conflict resolve for changeset %s" % self.uuid)
 						workspace.ws_remove_conflict_merge(rtcdir=rtcdir,changeset=self)
 						print("")
-					elif lscmservice.returncode == 3:
+					elif lscmservice.returncode == 3 or lscmservice.returncode == 8:
 						# shen get error "Unable to move" in aceept and cannot get conflicts
 						# discard the cs and add it into compress_changesets to try accept it together with next cs
 						# to improve, we should catch "Unable to move" 
@@ -328,7 +328,13 @@ class ChangeSet(MPTTModel):
 						shouter.shout("\t... lscm service issue, restarting")
 						rtclogin_restart()
 						time.sleep(5)
-						out_resume = shell.getoutput(command,clean=False)
+						try:
+							out_resume = shell.getoutput(command,clean=False)
+						except Exception as e:
+							if e.returncode == 8:
+								shell.execute("rm -fr .jazz* *")
+								workspace.ws_load(load_dir=rtcdir)
+							out_resume = "special handle after 243 and re-accept"
 					else:
 						raise ValueError("!!! Got unexpected resume error, lscm returned %g" % lscmservice.returncode)
 #				time.sleep(1)
@@ -368,7 +374,7 @@ class ChangeSet(MPTTModel):
 					time.sleep(5)
 					issues_commits = os.path.join(".issues","commits")
 					with open(issues_commits,'a') as issue:
-						issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+						issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment.encode('ascii', errors='ignore').decode('utf-8')))
 					out_status = shell.getoutput("git -C %s status -s" % rtcdir,clean=False)
 					out_add = shell.getoutput("git -C %s add -A; git -C %s status -s" % (rtcdir, rtcdir), clean=False)
 					out_commit = shell.getoutput(command,clean=False) 
@@ -393,9 +399,9 @@ class ChangeSet(MPTTModel):
 					issues_conflicts = os.path.join(".issues","conflicts")
 					with open(issues_conflicts,'a') as issue:
 						if returncode == 7:
-							issue.write("%s@%g\t\t%s\t\tcompress\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+							issue.write("%s@%g\t\t%s\t\tcompress\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment.encode('ascii', errors='ignore').decode('utf-8')))
 						else:
-							issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment))
+							issue.write("%s@%g\t\t%s\t\t%s\n" % (self.uuid, self.level, workspace.stream.name, self.comment.encode('ascii', errors='ignore').decode('utf-8')))
 		else:
 			shouter.shout("\t.!. changeset: %s has been migrated" % self.uuid)
 		return compress_changesets
@@ -2095,9 +2101,9 @@ class Workspace(models.Model):
 								os.chdir(rtcdir)
 								shell.execute("git -C %s fetch" % rtcdir)
 								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',s.name)))
-								shell.execute("git -C %s -D %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
+								shell.execute("git -C %s branch -D %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
 								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
-								shell.execute("git -C %s -D %s" % (rtcdir, re.sub(r' ','',s.name)))
+								shell.execute("git -C %s branch -D %s" % (rtcdir, re.sub(r' ','',s.name)))
 								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',s.name)))
 								shell.execute("git -C %s checkout %s" % (rtcdir, re.sub(r' ','',self.stream.name)))
 							else:
