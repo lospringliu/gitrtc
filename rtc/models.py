@@ -1006,7 +1006,7 @@ class Stream(MPTTModel):
 				input("ctrl + C to break")
 			else:
 				shouter.shout("\t... stream history updated and consistent, incremental to refresh new changesets")
-				command = "%s show history -r rtc -w %s -m 200 -j -C %s" % (scmcommand, self.uuid, self.component.uuid)
+				command = "%s show history -r rtc -w %s -m 500 -j -C %s" % (scmcommand, self.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
 				for i in range(len(uuids)):
@@ -1339,7 +1339,7 @@ class Stream(MPTTModel):
 					for new_changeset in new_changesets:
 						pass
 			else:
-				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit 1000 changsets are not sufficient" % self.name)
+				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit 100000 changsets are not sufficient" % self.name)
 				ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
 				ws_history.stream = self
 				ws_history.save()
@@ -1349,7 +1349,7 @@ class Stream(MPTTModel):
 				ws_history.ws_update()
 				ws_history.ws_list()
 				shouter.shout("\t ... get changeset history for stream %s, will take a while for long history..." % self.name)
-				command = "lscm show history -r rtc -w %s -m 1000 -j -C %s" % (ws_history.uuid, self.component.uuid)
+				command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (ws_history.uuid, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
 				with open(uuid_file,'w') as f:
@@ -1358,9 +1358,9 @@ class Stream(MPTTModel):
 					if ChangeSet.objects.all():
 						shouter.shout("\t!!! you have existing changesets already, can not perform intial history update")
 						sys.exit(9)
-					if len(uuids) == 1000:
+					if len(uuids) == 100000:
 						if USE_HISTORY_FILE:
-							shouter.shout("\t!!! show history for your streambase return more than 1000 changesets, you need provide the history file for this")
+							shouter.shout("\t!!! show history for your streambase return more than 100000 changesets, you need provide the history file for this")
 							sys.exit(9)
 						else:
 							shouter.shout("\t.!. trying to use lscm compare command to get the full list for you")
@@ -1533,7 +1533,7 @@ class Stream(MPTTModel):
 					#if len(uuids) < 1000:
 					if short_break:
 						history_partial = False
-					elif len(uuids) < 1000:
+					elif len(uuids) < 100000:
 						history_partial = False
 					else:
 						input("\t !!!did not find hook with other streams, terminate here")
@@ -2394,7 +2394,7 @@ class Workspace(models.Model):
 						giveup_try = True
 						while sleep_try < 10:
 							try:
-								shell.getoutput("cd %s ; rm -fr .jazz* %s; exit 0" % (load_dir, component_name), clean=False)
+								shell.getoutput("cd %s ; rm -fr .jazz* .meta* %s; exit 0" % (load_dir, component_name), clean=False)
 								shell.execute("cd %s ; ls -al" % load_dir)
 								time.sleep(sleep_try)
 								output = shell.getoutput("cd %s ; %s load -r rtc --all --force %s" % (load_dir,scmcommand,self.uuid),clean=False)
