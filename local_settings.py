@@ -47,9 +47,15 @@ COMPONENT_CREATORS = {
 	"user name 3": 'user3@mail.com', # who created the component 3
 }
 
+### resetting component starting if set
+### assume only care of specified streambase for now
+COMPONENT_STARTING_BASELINE = {
+	"component_name": 'baseline_uuid',
+}
+
 ### streams that is not needed or has issues migration, exclude first
 COMPONENT_STREAM_EXCLUDES = {
-	"compnent_name": ["stream_name_1", "stream_name_2"],
+	"component_name": ["stream_name_1", "stream_name_2"],
 }
 
 ## aggressively squash changesets that created previous than deliver time
