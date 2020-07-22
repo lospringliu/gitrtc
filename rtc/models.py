@@ -1104,10 +1104,12 @@ class Stream(MPTTModel):
 				
 		else:
 			if os.path.exists(history_filename):
+				print(".................... history file %s exists ............................" % history_filename)
 				subprocess.check_output("mkdir -p %s; exit 0" % history_dir,shell=True)
 				with open(history_filename,'r') as f:
 					lines = f.read().strip().split('\n')
-				uuids = list(map(lambda x: re.sub(r'.*com.ibm.team.scm.ChangeSet/|.Workspace=.*','',x.strip()), lines))
+				# (old format, copied from eclipse) uuids = list(map(lambda x: re.sub(r'.*com.ibm.team.scm.ChangeSet/|.Workspace=.*','',x.strip()), lines))
+				uuids = lines  ## uuid lists directly using scm client
 				with open(uuid_file,'w') as f:
 					json.dump(uuids,f)
 				if initial:
@@ -1932,9 +1934,37 @@ class Workspace(models.Model):
 				command_args += ' ' + changeset.uuid
 			print(shell.getoutput(command + command_args, clean=False))
 
-	def ws_resume(self,use_accept=False,do_validation=False):
+	def ws_resume(self,use_accept=False,do_validation=False,starting_baseline_in_stream=None):
 		rtcdir = os.path.join(migration_top,self.component.name,'rtcdir',re.sub(r' ','',self.stream.name))
 		json_compress_changesets = os.path.join(settings.BASE_DIR,'tmp',self.component.name,"json_compress_changesets")
+		## when STARTING_BASELINE is defined, we short cut the migration up to the baseline configured
+		if starting_baseline_in_stream:
+			bis0 = starting_baseline_in_stream
+			changeset0 = bis0.lastchangeset
+			pprint.pprint(changeset0)
+			qs_not_migrated = bis0.lastchangeset.get_ancestors().exclude(migrated=True).order_by('createtime')
+			if qs_not_migrated:
+				shouter.shout("\t... catching up staring from baseline, updating related changesets")
+				out_log = shell.getoutput("git -C %s log -1 --pretty=oneline" % rtcdir,clean=False)
+				commitid = out_log.split()[0]
+				gitcommit,created = GitCommit.objects.get_or_create(commitid=commitid)
+				if created:
+					shouter.shout("!!! got a new commit, should have been created by rtc_initialize")
+					sys.exit(11)
+				for changeset in qs_not_migrated:
+					changeset.migrated = True
+					changeset.save()
+					# branching point if need, create a branch and rtc workspace
+					# keep consistency with the normal cases
+					if changeset.level % 100 == 0:
+						print(changeset.level)
+				shouter.shout("resetting compressed changesets")
+				compress_changesets = []
+				save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
+				input("ctrl + c  to quit or continuing")
+			else:
+				shouter.shout("starting baseline has been migrated before")
+
 		compress_changesets = []
 		compress_changesets2 = []
 		if os.path.exists(json_compress_changesets):
@@ -1944,6 +1974,7 @@ class Workspace(models.Model):
 		shouter.shout("\t...stream: %s, snapshot: %s" % (self.stream.name, str(self.snapshot)))
 		os.chdir(rtcdir)
 		pushnum = 1
+
 		## remove snapshot based part, do not keep them
 		if self.stream and self.stream.lastchangeset:
 			shouter.shout("\t...performing stream based migration")

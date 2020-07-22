@@ -10,6 +10,8 @@ from optparse import OptionParser
 from django.core.mail import send_mail
 import imp
 
+STARTING_BASELINE=None
+starting_baseline_in_stream=None
 DJANGOPATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(DJANGOPATH)
 os.environ["DJANGO_SETTINGS_MODULE"] = "gitrtc.settings"
@@ -104,6 +106,7 @@ if __name__ == '__main__':
 		from rtc.models import *
 		from functions import *
 		from django.conf import settings
+		import local_settings
 		db = settings.DATABASES['default']
 		try:
 			ccs,creatd = Category.objects.get_or_create(name='changeset')
@@ -166,6 +169,12 @@ if __name__ == '__main__':
 				sys.exit(9)
 		if options.verbose:
 			verbose = True
+		COMPONENT_STARTING_BASELINE = local_settings.COMPONENT_STARTING_BASELINE
+		if component_name in COMPONENT_STARTING_BASELINE.keys():
+			STARTING_BASELINE = COMPONENT_STARTING_BASELINE[component_name]
+			starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
+			starting_baseline_in_stream = BaselineInStream.objects.get(stream=stream0, baseline=starting_baseline)
+			print("\t.!. shortcutting component %s with baseline %s, until to the changeset %s at level %g" % (component_name, STARTING_BASELINE, starting_baseline_in_stream.lastchangeset, starting_baseline_in_stream.lastchangeset.level))
 
 	if options.showstream:
 		try:
@@ -717,6 +726,8 @@ if __name__ == '__main__':
 						ws_migrate.ws_update()
 						ws_migrate.ws_list()
 						ws_migrate.stream = stream
+						if STARTING_BASELINE:
+							ws_migrate.baseline = starting_baseline
 						ws_migrate.component = stream.component
 						ws_migrate.save()
 						ws_migrate.ws_add_component()
@@ -769,13 +780,13 @@ if __name__ == '__main__':
 				queryset_not_migrated = ws_migrate.stream.lastchangeset.get_ancestors(include_self=True).filter(migrated=False)
 				stream.refresh_from_db()
 				if queryset_not_migrated:
-					if queryset_not_migrated.first().parent != last_migrated_changeset:
+					if queryset_not_migrated.first().parent != last_migrated_changeset and not STARTING_BASELINE:
 						shouter.shout("\t!!! got incorrect resuming, inspect it manually please")
 						sys.exit(9)
 					else:
 						ws_migrate.ws_suspend()
 						# === migrate from RTC to git for a workspace ===
-						ws_migrate.ws_resume(use_accept=True,do_validation=True)
+						ws_migrate.ws_resume(use_accept=True,do_validation=True,starting_baseline_in_stream=starting_baseline_in_stream)
 				else:
 					shouter.shout("\t... stream %s has been migrated already" % stream.name)
 					if not stream.migrated:

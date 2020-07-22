@@ -96,7 +96,7 @@ def git_compress_changeset(workspace=None,rtcdir='',changeset=None):
 
 def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,is_master=False,verifying=False):
 	randint = random.randint(100,999)
-	from rtc.models import GitCommit, ChangeSet, Author
+	from rtc.models import GitCommit, ChangeSet, Author, BaselineInStream
 	if not os.path.exists(rtcdir):
 		shell.execute("mkdir -p %s ; rm -fr %s" % (rtcdir,rtcdir))
 		shouter.shout("clone from git repo @%s to %s" % (gitdir, rtcdir))
@@ -113,10 +113,23 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 			shell.execute("git -C %s add -A" % rtcdir)
 			changeset0 = ChangeSet.objects.all()[0]
 			items = rtc_show_history(workspace=workspace,component=component,maxitems=1)
-			if not 'changes' in items.keys() or len(items['changes']) != 1 or items['changes'][0]['uuid'] != changeset0.uuid:
+			# if not 'changes' in items.keys() or len(items['changes']) != 1 or items['changes'][0]['uuid'] != changeset0.uuid:
+			if not 'changes' in items.keys() or len(items['changes']) != 1:
 				shouter.shout("\t!!! got incorrect initializing, inspect it manually please")
 				sys.exit(9)
-			item = items['changes'][0]
+			else:
+				item = items['changes'][0]
+			if item['uuid'] != changeset0.uuid and workspace.baseline:
+				shouter.shout("\t.!. baseline shortcut initialization")
+				bis = BaselineInStream.objects.get(stream=workspace.stream, baseline=workspace.baseline)
+				if bis.lastchangeset.uuid != item['uuid']:
+					shouter.shout("\t!!! does not corresponds to the shortcut baseline")
+					sys.exit(9)
+			elif item['uuid'] != changeset0.uuid:
+				shouter.shout("\t!!! got incorrect initializing, inspect it manually please")
+				sys.exit(9)
+			else:
+				pass
 			author = item['author']
 			timestamp = string2datetime(item["modified"])
 			if not author in settings.COMPONENT_CREATORS.keys():
@@ -137,9 +150,9 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 				sys.exit(9)
 			gitcommit = GitCommit(commitid=commitid,timestamp=timestamp)
 			gitcommit.save()
-			changeset0.commit = gitcommit
-			changeset0.migrated = True
-			changeset0.save()
+			item.commit = gitcommit
+			item.migrated = True
+			item.save()
 			shell.execute("rm -fr %s" % rtcdir)
 	#	else:
 	#		shouter.shout("\t!!! you need migrate your base stream first")
@@ -149,7 +162,16 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 	if load:
 		shouter.shout("\t... load initial workspace")
 		shell.execute("mv %s/.git %s/../.git-%g; sync" % (rtcdir, rtcdir, randint))
-		workspace.ws_load(load_dir=rtcdir)
+		shell.execute("rm -fr * .jazz* .metadata; sync")
+		try:
+			workspace.ws_load(load_dir=rtcdir)
+		except Exception as e:
+			if e.returncode == 3:
+				rtclogin_restart()
+				time.sleep(2)
+				shell.execute("%s list connections" % scmcommand)
+				shell.execute("rm -fr * .jazz* .metadata; sync")
+				workspace.ws_load(load_dir=rtcdir)
 		time.sleep(10)
 		shell.execute("mv %s/../.git-%g %s/.git ; sync ; git -C %s add -A" % (rtcdir, randint, rtcdir, rtcdir))
 #	if not is_master:
