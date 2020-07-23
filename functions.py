@@ -9,6 +9,10 @@ migration_top = os.path.abspath(os.path.join(settings.BASE_DIR,"..","migration")
 NODE_NAME = os.uname().nodename
 
 try:
+	COMPONENT_STREAM = local_settings.COMPONENT_STREAM
+except Exception as e:
+	COMPONENT_STREAM = {}
+try:
 	COMPONENT_STREAM_EXCLUDES = local_settings.COMPONENT_STREAM_EXCLUDES
 except Exception as e:
 	COMPONENT_STREAM_EXCLUDES = []
@@ -323,37 +327,56 @@ def sync_streams(short_cut=False,component_name=''):
 	# shen added some comments
 	# short_cut=False only in options.infoinit
 	if short_cut:
+		if component_name and component_name in COMPONENT_STREAM:
+			STARTING_BASELINE = COMPONENT_STREAM[component_name]["starting_baseline"]
+			streams_only = COMPONENT_STREAM[component_name]["streams_only"]
+			streams_exclude = COMPONENT_STREAM[component_name]["streams_exclude"]
+		else:
+			STARTING_BASELINE = ''
+			streams_only = []
+			streams_exclude = []
+			
 		shouter.shout("\t.!.Assume you have loaded the fixtures or you are repeating inforupdate")
 		shouter.shout("\t...bypassing stream creation and its components updates, simply resetting stream.component instead")
 		try:
+			component = Component.objects.get(name=component_name)
 			# shen added some comments
 			# exclude bad or unwanted streams defined in local_settings.py for a given compoment
-			excluded_stream_names = []
-			if component_name in COMPONENT_STREAM_EXCLUDES.keys():
-				excluded_stream_names = COMPONENT_STREAM_EXCLUDES[component_name]
-			component = Component.objects.get(name=component_name)
+			# consider only, exclude
 			# shen added some comments
 			#looping throght all streams, add the given component with component_name into the streams
 			for stream in Stream.objects.all():
 				if component in stream.components.all():
-					if stream.name not in excluded_stream_names:
-						if stream.component != component:
-							shouter.shout("\t...setting componet %s for stream %s" % (component_name, stream.name))
-							stream.component = component
-							stream.save()
+					if stream.name in streams_exclude: # exclude explicitely specified
+						stream.component = None
+						stream.save()
 					else:
-						if stream.component and stream.component == component:
-							shouter.shout("\t.!.unsetting component %s for stream %s" % (component_name, stream.name))
-							stream.component = None
+						if streams_only: # explicitely specified to include
+							if stream.name in streams_only: # include explicitely specified
+								if stream.component != component:
+									shouter.shout("\t...setting componet %s for stream %s" % (component_name, stream.name))
+									stream.component = component
+									stream.save()
+							else: # exclude not explicitely specified
+								if stream.component and stream.component == component:
+									shouter.shout("\t.!.unsetting component %s for stream %s" % (component_name, stream.name))
+									stream.component = None
+									stream.save()
+						else: # if no explicitely specified to include
+							stream.component = component
 							stream.save()
 				else:
 					if stream.component and stream.component == component:
 						shouter.shout("\t.!.unsetting component %s for stream %s" % (component_name, stream.name))
 						stream.component = None
 						stream.save()
-			shouter.shout("Streams that has component %s are:" % component_name)
+			shouter.shout("Streams that has component %s and is related are:" % component_name)
 			for stream in Stream.objects.filter(component__name=component_name):
 				print("%-8g%s" % (stream.id, stream.name))
+		#	If only wish to migrate streambase, then set all stream's component to None
+		#	for stream in Stream.objects.all():
+		#		stream.component = None
+		#		stream.save()
 		except Component.DoesNotExist:
 			raise ValueError("\t!!!The component name you specified was not found, did you run --infoinit?")
 	else:

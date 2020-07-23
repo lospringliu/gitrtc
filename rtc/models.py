@@ -25,6 +25,18 @@ except Exception as e:
 	SQUASH_MAX_TRY = 10
 if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
+
+STARTING_BASELINE=''
+starting_baseline=None
+starting_baseline_in_stream=None
+streams_only = []
+streams_exclude = []
+
+try:
+	COMPONENT_STREAM = settings.COMPONENT_STREAM
+except:
+	COMPONENT_STREAM = {}
+
 try:
 	COMPONENT_STREAM_EXCLUDES = settings.COMPONENT_STREAM_EXCLUDES
 except Exception as e:
@@ -504,7 +516,7 @@ class Component(models.Model):
 	def __str__(self):
 		return self.name + " (component:" + self.uuid + ")"
 	def update_baselines(self):
-		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 1000 -j" % (scmcommand, self.uuid), clean=False))
+		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 2000 -j" % (scmcommand, self.uuid), clean=False))
 		for item in items:
 			if type(item) == type({}) and 'baselines' in item.keys():
 				for sitem in item['baselines']:
@@ -777,6 +789,14 @@ class Stream(MPTTModel):
 				self.save()
 
 	def update_baselines_changesets(self,post_incremental=False):
+		if self.component and self.component.name in COMPONENT_STREAM:
+			STARTING_BASELINE = COMPONENT_STREAM[self.component.name]["starting_baseline"]
+
+		if STARTING_BASELINE:
+			try:
+				starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
+			except Exception as e:
+				print("\t.!. starting_baseline not available yet")
 		history_dir = os.path.join(settings.BASE_DIR,'tmp',self.component.name)
 		compare_file = os.path.join(history_dir, "compare_%s" % re.sub(r' ','',self.name))
 		print("\t... update baselines and their changesets for stream %s" % self.name)
@@ -815,6 +835,9 @@ class Stream(MPTTModel):
 				if last_processed_baseline:
 					shouter.shout("\t... updating changesets from last processed baseline %s on stream %s" % (last_processed_baseline.uuid, self.name))
 					ws_history.baseline = last_processed_baseline
+			# set ws_history.baseline if specified in local_settings
+			if starting_baseline:
+				ws_history.baseline = starting_baseline
 			ws_history.save()
 			ws_history.ws_add_component()
 			#ws_history.ws_unset_flowtarget()
@@ -879,6 +902,11 @@ class Stream(MPTTModel):
 						changeset.save()
 				else:
 					raise ValueError("!!! can not find uuid info in the changeset in compare result")
+			if starting_baseline:
+				for changeset in self.lastchangeset.get_ancestors().filter(compared=False):
+					changeset.comment = 'shortcut by starting baseline'
+					changeset.compared = True
+					changeset.save()
 			for i in range(len(output)):
 				print("%s\t%s\t%s" % (output[i]['name'],output[i]['uuid'], output[i]['item-type']))
 				baseline, created = Baseline.objects.get_or_create(uuid=output[i]['uuid'])

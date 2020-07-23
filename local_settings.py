@@ -47,10 +47,13 @@ COMPONENT_CREATORS = {
 	"user name 3": 'user3@mail.com', # who created the component 3
 }
 
-### resetting component starting if set
-### assume only care of specified streambase for now
-COMPONENT_STARTING_BASELINE = {
-	"component_name": 'baseline_uuid',
+## if you need some special treatment with a component
+COMPONENT_STREAM = {
+	"component_name": {
+		"starting_baseline": 'baseline_uuid',
+		"streams_only": ["stream_name_1", "stream_name_2"],
+		"streams_exclude": ["stream_name_3", "stream_name_4"],
+	},
 }
 
 ### streams that is not needed or has issues migration, exclude first

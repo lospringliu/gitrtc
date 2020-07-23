@@ -10,8 +10,12 @@ from optparse import OptionParser
 from django.core.mail import send_mail
 import imp
 
-STARTING_BASELINE=None
+STARTING_BASELINE=''
+starting_baseline=None
 starting_baseline_in_stream=None
+streams_only = []
+streams_exclude = []
+
 DJANGOPATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(DJANGOPATH)
 os.environ["DJANGO_SETTINGS_MODULE"] = "gitrtc.settings"
@@ -169,12 +173,23 @@ if __name__ == '__main__':
 				sys.exit(9)
 		if options.verbose:
 			verbose = True
-		COMPONENT_STARTING_BASELINE = local_settings.COMPONENT_STARTING_BASELINE
-		if component_name in COMPONENT_STARTING_BASELINE.keys():
-			STARTING_BASELINE = COMPONENT_STARTING_BASELINE[component_name]
-			starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
-			starting_baseline_in_stream = BaselineInStream.objects.get(stream=stream0, baseline=starting_baseline)
-			print("\t.!. shortcutting component %s with baseline %s, until to the changeset %s at level %g" % (component_name, STARTING_BASELINE, starting_baseline_in_stream.lastchangeset, starting_baseline_in_stream.lastchangeset.level))
+		COMPONENT_STREAM = local_settings.COMPONENT_STREAM
+		if component_name in COMPONENT_STREAM:
+			STARTING_BASELINE = COMPONENT_STREAM[component_name]["starting_baseline"]
+			streams_only = COMPONENT_STREAM[component_name]["streams_only"]
+			streams_exclude = COMPONENT_STREAM[component_name]["streams_exclude"]
+			print("\t.!. shortcutting component %s with baseline %s" % (component_name, STARTING_BASELINE))
+			print(streams_only)
+			print(streams_exclude)
+		if STARTING_BASELINE:
+			try:
+				starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
+			except Exception as e:
+				print("\t.!. starting_baseline not available yet")
+			try:
+				starting_baseline_in_stream = BaselineInStream.objects.get(stream=stream0, baseline=Baseline.objects.get(uuid=STARTING_BASELINE))
+			except Exception as e:
+				print(".t.!. starting_baseline_in_stream not available yet")
 
 	if options.showstream:
 		try:
@@ -571,6 +586,8 @@ if __name__ == '__main__':
 				shouter.shout("\t!!!the parent stream should have its firstchangeset attribute")
 			sys.exit(9)
 		sync_streams(component_name=component_name,short_cut=True)
+		stream0.component = component0
+		stream0.save()
 		shouter.shout("\t... refresh all of the baselines for component %s" % component0.name)
 		component0.update_baselines()
 		try:
@@ -687,8 +704,14 @@ if __name__ == '__main__':
 #		for stream in Stream.objects.filter(name=optionsstream):
 		for stream in Stream.objects.filter(component__name=component_name):
 			print("\t\t%s" % str(stream))
+		#input("after sync streams, should print only the ones we consider")
 
 	elif options.migrate:
+		if STARTING_BASELINE:
+			try:
+				starting_baseline_in_stream = BaselineInStream.objects.get(stream=stream0, baseline=Baseline.objects.get(uuid=STARTING_BASELINE))
+			except Exception as e:
+				print(".t.!. starting_baseline_in_stream not available yet")
 		shouter.shout("\t... trying to backup the database before migration happen if not yet")
 		if db['ENGINE'] == 'django.db.backends.sqlite3':
 			if os.path.exists(db['NAME']):
