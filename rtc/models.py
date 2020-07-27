@@ -789,14 +789,14 @@ class Stream(MPTTModel):
 				self.save()
 
 	def update_baselines_changesets(self,post_incremental=False):
+		starting_baseline = None
 		if self.component and self.component.name in COMPONENT_STREAM:
 			STARTING_BASELINE = COMPONENT_STREAM[self.component.name]["starting_baseline"]
-
-		if STARTING_BASELINE:
-			try:
-				starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
-			except Exception as e:
-				print("\t.!. starting_baseline not available yet")
+			if STARTING_BASELINE:
+				try:
+					starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
+				except Exception as e:
+					print("\t.!. starting_baseline not available yet")
 		history_dir = os.path.join(settings.BASE_DIR,'tmp',self.component.name)
 		compare_file = os.path.join(history_dir, "compare_%s" % re.sub(r' ','',self.name))
 		print("\t... update baselines and their changesets for stream %s" % self.name)
@@ -1011,6 +1011,9 @@ class Stream(MPTTModel):
 				snapshotp = snapshot
 				self.snapshots.add(snapshot)
 	def update_history(self,initial=False,post_incremental=False):
+		maximum_query_records = 3000
+		if initial:
+			maximum_query_records = 100000
 		history_dirbase = os.path.join(settings.BASE_DIR,'History')
 		history_dir = os.path.join(settings.BASE_DIR,'tmp',self.component.name)
 		subprocess.check_output("mkdir -p %s ; exit 0" % history_dir,shell=True)
@@ -1369,7 +1372,7 @@ class Stream(MPTTModel):
 					for new_changeset in new_changesets:
 						pass
 			else:
-				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit 100000 changsets are not sufficient" % self.name)
+				shouter.shout(".!.updating the history changeset for stream: %s, note that the cmd show history is limited, you need to prepare the history file if the limit %s changsets are not sufficient" % (self.name, maximum_query_records))
 				ws_history,created = Workspace.objects.get_or_create(name="git_history_%s" % self.component.name)
 				ws_history.stream = self
 				ws_history.save()
@@ -1379,7 +1382,7 @@ class Stream(MPTTModel):
 				ws_history.ws_update()
 				ws_history.ws_list()
 				shouter.shout("\t ... get changeset history for stream %s, will take a while for long history..." % self.name)
-				command = "lscm show history -r rtc -w %s -m 100000 -j -C %s" % (ws_history.uuid, self.component.uuid)
+				command = "lscm show history -r rtc -w %s -m %s -j -C %s" % (ws_history.uuid, maximum_query_records, self.component.uuid)
 				historys = json.loads(shell.getoutput(command,clean=False))
 				uuids = list(map(lambda x: x['uuid'],  historys['changes']))
 				with open(uuid_file,'w') as f:
@@ -1388,9 +1391,9 @@ class Stream(MPTTModel):
 					if ChangeSet.objects.all():
 						shouter.shout("\t!!! you have existing changesets already, can not perform intial history update")
 						sys.exit(9)
-					if len(uuids) == 100000:
+					if len(uuids) == maximum_query_records:
 						if USE_HISTORY_FILE:
-							shouter.shout("\t!!! show history for your streambase return more than 100000 changesets, you need provide the history file for this")
+							shouter.shout("\t!!! show history for your streambase return more than %s changesets, you need provide the history file for this" % maximum_query_records)
 							sys.exit(9)
 						else:
 							shouter.shout("\t.!. trying to use lscm compare command to get the full list for you")
@@ -1560,10 +1563,9 @@ class Stream(MPTTModel):
 						self.firstchangeset = changeset
 						self.save()
 					history_updated = True
-					#if len(uuids) < 1000:
 					if short_break:
 						history_partial = False
-					elif len(uuids) < 100000:
+					elif len(uuids) < maximum_query_records:
 						history_partial = False
 					else:
 						input("\t !!!did not find hook with other streams, terminate here")
