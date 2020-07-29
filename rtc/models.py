@@ -516,7 +516,7 @@ class Component(models.Model):
 	def __str__(self):
 		return self.name + " (component:" + self.uuid + ")"
 	def update_baselines(self):
-		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 2000 -j" % (scmcommand, self.uuid), clean=False))
+		items = json.loads(shell.getoutput("%s list baselines -C %s -r rtc -m 10000 -j" % (scmcommand, self.uuid), clean=False))
 		for item in items:
 			if type(item) == type({}) and 'baselines' in item.keys():
 				for sitem in item['baselines']:
@@ -1202,7 +1202,7 @@ class Stream(MPTTModel):
 									shouter.shout("\t\t... got %g changesets so far, verify if we found the path already" % i)
 									j = i
 									changesett = changeset
-									while j < min(500, len(uuids) - 1):
+									while j < min(i + 500, len(uuids) - 1):
 										j += 1
 										if changesett.parent:
 											changesett = changesett.parent
@@ -1299,7 +1299,7 @@ class Stream(MPTTModel):
 								shouter.shout("\t\t... got %g changesets so far, verify if we found the path already" % i)
 								j = i
 								changesett = changeset
-								while j < min(500, len(uuids) - 1):
+								while j < min(i + 500, len(uuids) - 1):
 									j += 1
 									if changesett.parent:
 										changesett = changesett.parent
