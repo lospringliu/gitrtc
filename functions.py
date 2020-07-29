@@ -125,6 +125,7 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 				item = items['changes'][0]
 			if item['uuid'] != changeset0.uuid and workspace.baseline:
 				shouter.shout("\t.!. baseline shortcut initialization")
+				changeset0 = ChangeSet.objects.get(uuid=item['uuid'])
 				bis = BaselineInStream.objects.get(stream=workspace.stream, baseline=workspace.baseline)
 				if bis.lastchangeset.uuid != item['uuid']:
 					shouter.shout("\t!!! does not corresponds to the shortcut baseline")
@@ -154,9 +155,9 @@ def rtc_initialize(rtcdir,gitdir=None,workspace=None,component=None,load=False,i
 				sys.exit(9)
 			gitcommit = GitCommit(commitid=commitid,timestamp=timestamp)
 			gitcommit.save()
-			item.commit = gitcommit
-			item.migrated = True
-			item.save()
+			changeset0.commit = gitcommit
+			changeset0.migrated = True
+			changeset0.save()
 			shell.execute("rm -fr %s" % rtcdir)
 	#	else:
 	#		shouter.shout("\t!!! you need migrate your base stream first")

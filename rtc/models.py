@@ -27,13 +27,12 @@ if SQUASH_MAX_TRY > 10:
 	SQUASH_MAX_TRY = 10
 
 STARTING_BASELINE=''
-starting_baseline=None
-starting_baseline_in_stream=None
 streams_only = []
 streams_exclude = []
 
 try:
 	COMPONENT_STREAM = settings.COMPONENT_STREAM
+	STARTING_BASELINE = COMPONENT_STREAM[self.component.name]["starting_baseline"]
 except:
 	COMPONENT_STREAM = {}
 
@@ -788,13 +787,13 @@ class Stream(MPTTModel):
 				self.firstchangeset = self.lastchangeset.get_ancestors().first()
 				self.save()
 
-	def update_baselines_changesets(self,post_incremental=False):
-		starting_baseline = None
+	def update_baselines_changesets(self,post_incremental=False, stream_base=''):
+		starting_baseline_in_settings=None
 		if self.component and self.component.name in COMPONENT_STREAM:
-			STARTING_BASELINE = COMPONENT_STREAM[self.component.name]["starting_baseline"]
 			if STARTING_BASELINE:
+				print("short cutting from baseline?")
 				try:
-					starting_baseline = Baseline.objects.get(uuid=STARTING_BASELINE)
+					starting_baseline_in_settings = Baseline.objects.get(uuid=STARTING_BASELINE)
 				except Exception as e:
 					print("\t.!. starting_baseline not available yet")
 		history_dir = os.path.join(settings.BASE_DIR,'tmp',self.component.name)
@@ -836,8 +835,8 @@ class Stream(MPTTModel):
 					shouter.shout("\t... updating changesets from last processed baseline %s on stream %s" % (last_processed_baseline.uuid, self.name))
 					ws_history.baseline = last_processed_baseline
 			# set ws_history.baseline if specified in local_settings
-			if starting_baseline:
-				ws_history.baseline = starting_baseline
+			#if starting_baseline_in_settings and self.name == stream_base:
+			#	ws_history.baseline = starting_baseline_in_settings
 			ws_history.save()
 			ws_history.ws_add_component()
 			#ws_history.ws_unset_flowtarget()
@@ -902,11 +901,6 @@ class Stream(MPTTModel):
 						changeset.save()
 				else:
 					raise ValueError("!!! can not find uuid info in the changeset in compare result")
-			if starting_baseline:
-				for changeset in self.lastchangeset.get_ancestors().filter(compared=False):
-					changeset.comment = 'shortcut by starting baseline'
-					changeset.compared = True
-					changeset.save()
 			for i in range(len(output)):
 				print("%s\t%s\t%s" % (output[i]['name'],output[i]['uuid'], output[i]['item-type']))
 				baseline, created = Baseline.objects.get_or_create(uuid=output[i]['uuid'])
@@ -920,6 +914,11 @@ class Stream(MPTTModel):
 						continue
 				changesets = output[i].get('changesets',[])
 				baselineinstream.update(changesets=changesets)
+			if starting_baseline_in_settings and self.name == stream_base:
+				for changeset in self.lastchangeset.get_ancestors().filter(compared=False):
+					changeset.comment = 'shortcut by starting baseline'
+					changeset.compared = True
+					changeset.save()
 		self.changesets_compared = True
 		self.save()
 		shouter.shout("... finished for stream %s" % self.name)
@@ -1991,7 +1990,7 @@ class Workspace(models.Model):
 				shouter.shout("resetting compressed changesets")
 				compress_changesets = []
 				save_compress_changesets_to_json(json_compress_changesets, compress_changesets)
-				input("ctrl + c  to quit or continuing")
+				# input("ctrl + c  to quit or continuing")
 			else:
 				shouter.shout("starting baseline has been migrated before")
 

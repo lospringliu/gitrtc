@@ -585,6 +585,7 @@ if __name__ == '__main__':
 			else:
 				shouter.shout("\t!!!the parent stream should have its firstchangeset attribute")
 			sys.exit(9)
+		# SHEN , comment below to handle only stream0
 		sync_streams(component_name=component_name,short_cut=True)
 		stream0.component = component0
 		stream0.save()
@@ -609,12 +610,12 @@ if __name__ == '__main__':
 			shouter.shout("\t... processing stream %s" % stream0.name)
 			stream0.update_baselines(post_incremental=True)
 			stream0.update_history(post_incremental=True)
-			stream0.update_baselines_changesets(post_incremental=True)
+			stream0.update_baselines_changesets(post_incremental=True, stream_base=stream0.name)
 			for stream in list_streams:
 				shouter.shout("\t... processing stream %s" % stream.name)
 				stream.update_baselines(post_incremental=True)
 				stream.update_history(post_incremental=True)
-				stream.update_baselines_changesets(post_incremental=True)
+				stream.update_baselines_changesets(post_incremental=True, stream_base=stream0.name)
 			sys.exit(9)
 		 
 		#shouter.shout("\tsnapshots for stream %s" % stream0.name)
@@ -633,7 +634,7 @@ if __name__ == '__main__':
 				stream0 = Stream.objects.get(id=stream0.id)
 			if not stream0.changesets_compared:
 				if not options.shortcut_analyze:
-					stream0.update_baselines_changesets()
+					stream0.update_baselines_changesets(stream_base=stream0.name)
 			if db['ENGINE'] == 'django.db.backends.sqlite3':
 				subprocess.check_output("sync; sleep 1; sync; sleep 1; cp -f %s %s ; exit 0 " % (db['NAME'], os.path.join(settings.BASE_DIR,'tmp',component_name,'db.' + re.sub(r' ','',stream0.name))),shell=True)
 			elif db['ENGINE'] == 'django.db.backends.mysql':
@@ -649,7 +650,7 @@ if __name__ == '__main__':
 					shouter.shout("\t.!. There are more than one changesets that were not compared, try to solve it with --incremental")
 					stream0.update_baselines(post_incremental=True)
 					stream0.update_history(post_incremental=True)
-					stream0.update_baselines_changesets(post_incremental=True)
+					stream0.update_baselines_changesets(post_incremental=True, stream_base=stream0.name)
 				if stream0.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, should you solve it with --infoupdate --incremental")
 					input("continue or break")
@@ -675,7 +676,7 @@ if __name__ == '__main__':
 				input("\t !!! got issue updating history, continue or break?")
 			if not stream.changesets_compared:
 				if not options.shortcut_analyze:
-					stream.update_baselines_changesets()
+					stream.update_baselines_changesets(stream_base=stream0.name)
 			if db['ENGINE'] == 'django.db.backends.sqlite3':
 				subprocess.check_output("sync; sleep 1; sync; sleep 1; cp -f %s %s ; exit 0 " % (db['NAME'], os.path.join(settings.BASE_DIR,'tmp',component_name,'db.' + re.sub(r' ','',stream.name))),shell=True)
 			elif db['ENGINE'] == 'django.db.backends.mysql':
@@ -691,7 +692,7 @@ if __name__ == '__main__':
 					shouter.shout("\t.!. There are more than one changesets that were not compared, try to solve it with --infoupdate --incremental")
 					stream.update_baselines(post_incremental=True)
 					stream.update_history(post_incremental=True)
-					stream.update_baselines_changesets(post_incremental=True)
+					stream.update_baselines_changesets(post_incremental=True, stream_base=stream0.name)
 				if stream.lastchangeset.get_ancestors(include_self=True).filter(compared=False).count() > 1:
 					shouter.shout("\t.!. There are more than one changesets that were not compared, should you solve it with --infoupdate --incremental")
 					input("continue or break")
